@@ -1,4 +1,4 @@
-$Id: INSTALL,v 1.25 1999/05/15 14:20:46 ecila40 Exp $
+$Id: INSTALL,v 1.26 1999/05/18 18:49:57 loic Exp $
 
 The Catalog home page is http://www.senga.org/
 
@@ -13,7 +13,7 @@ Quick start (assuming you have installed MySQL and Perl):
 	  #
 	  MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
 	     DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
-             USE_CONFIG='' HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
+             USE_CONFIG='' USE_DEFAULTS=1 HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
              CGIDIR=/home/httpd/cgi-bin CGIPATH=/cgi-bin \
 	     USERID=nobody \
 	     MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
@@ -208,7 +208,7 @@ cd /usr/ports/www/apache13 ; \
 #
 MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
  DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
- USE_CONFIG='' HTMLDIR=/usr/local/www/data/Catalog HTMLPATH=/Catalog \
+ USE_CONFIG='' USE_DEFAULTS=1 HTMLDIR=/usr/local/www/data/Catalog HTMLPATH=/Catalog \
  CGIDIR=/usr/local/www/cgi-bin CGIPATH=/cgi-bin \
  USERID=nobody \
  MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
@@ -273,7 +273,7 @@ rpm -ivh MySQL-devel-3.22.19a-1.i386.rpm
 #
 MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
  DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
- USE_CONFIG='' HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
+ USE_CONFIG='' USE_DEFAULTS=1 HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
  CGIDIR=/home/httpd/cgi-bin CGIPATH=/cgi-bin \
  USERID=nobody \
  MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
@@ -385,7 +385,7 @@ $HOME/local/bin/apachectl start
 #
 MYSQL_HOME=$HOME/local/mysql IN_MYSQL_DISTRIBUTION=1 \
  DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
- USE_CONFIG='' HTMLDIR=$HOME/local/htdocs/Catalog HTMLPATH=/Catalog \
+ USE_CONFIG='' USE_DEFAULTS=1 HTMLDIR=$HOME/local/htdocs/Catalog HTMLPATH=/Catalog \
  CGIDIR=$HOME/local/cgi-bin CGIPATH=/cgi-bin \
  USERID=nobody \
  MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \

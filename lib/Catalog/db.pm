@@ -66,6 +66,12 @@ sub instance_load {
     $self->{'instance'} = $instance;
 }
 
+sub connect_error_handler {
+    my($self, $func) = @_;
+
+    $self->{'instance'}->{'connect_error_handler'} = $func;
+}
+
 sub instance { shift->{'instance'}; }
 
 sub quote { shift->instance()->quote(@_); }

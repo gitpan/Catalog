@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /spare2/ecila-cvsroot/Catalog/lib/Catalog.pm,v 1.43 1999/05/17 10:13:41 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog.pm,v 1.44 1999/05/18 18:51:04 loic Exp $
 #
 # 
 package Catalog;
@@ -37,7 +37,7 @@ use Catalog::tools::tools;
 
 @ISA = qw(Catalog::tools::sqledit Catalog::implementation);
 
-$VERSION = "0.9";
+$VERSION = "0.10";
 sub Version { $VERSION; }
 
 #

@@ -22,7 +22,6 @@ use strict;
 
 use Carp;
 use CGI;
-use Ecila::tools::mysql;
 use Ecila::tools::cgi;
 use Ecila::db;
 use Ecila::tools::tools;
@@ -223,11 +222,20 @@ sub initialize {
     $self->{'db'} = Ecila::db->new() if(!defined($self->{'db'}));
     my($db) = $self->{'db'};
     $db->resources_load('sqledit_schema', 'Ecila::tools::schema');
+    $db->connect_error_handler(sub { $self->connect_error_handler(@_); });
 
     $self->{'params'} = [ 'table', 'links_set', 'stack', 'context', 'conf', 'order', 'style', 'limit' ];
     $self->{'templates'} = { %default_templates };
 
     $self->special_auth_initialize();
+}
+
+sub connect_error_handler {
+    my($self, $db_type, $error) = @_;
+
+    my($cgi) = $self->{'cgi'};
+    my($url) = $cgi->url('-absolute' => 1);
+    $self->serror("Could not connect to database because: <p><pre>%s</pre> Try <a href=$url?context=confedit&file=$db_type.conf>editing $db_type.conf</a> and check that the database server is running.", $error);
 }
 
 sub run {
@@ -2313,22 +2321,6 @@ sub hidden {
     my($self, %pairs) = @_;
 
     return $self->{'cgi'}->hidden($self->{'params'}, %pairs);
-}
-
-sub connect {
-    my($self) = @_;
-    my($connection);
-    eval {
-	$connection = $self->Ecila::tools::mysql::connect();
-    };
-    if($@) {
-	my($error) = $@;
-	my($cgi) = $self->{'cgi'};
-	my($url) = $cgi->url('-absolute' => 1);
-	$self->serror("Could not connect to database because: <p><pre>%s</pre> Try <a href=$url?context=confedit&file=mysql.conf>editing mysql.conf</a> and check that the database server is running.", $error);
-    } else {
-	return $connection;
-    }
 }
 
 sub confedit {

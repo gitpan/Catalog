@@ -8,7 +8,7 @@
 # Uncomment the ok() because it appear like slight leak, which is natural.
 # Run the test. The numbers, except for the first two, must not change at all.
 #
-# $Header: /spare2/ecila-cvsroot/Catalog/t/01catalog.t,v 1.5 1999/05/15 14:20:50 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/t/01catalog.t,v 1.5 1999/05/15 14:20:50 ecila40 Exp $
 #
 use strict;
 

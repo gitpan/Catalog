@@ -48,7 +48,7 @@ sub initialize {
 sub hook {
     my($self, $hook_class) = @_;
 
-    eval "package Catalog::tools::mysql::_firesafe; require $hook_class";
+    eval "package Catalog::db::mysql::_firesafe; require $hook_class";
     if ($@) {
 	my($advice) = "";
 	if($@ =~ /Can't find loadable object/) {
@@ -106,6 +106,26 @@ sub datetime {
 }
 
 sub connect {
+    my($self) = @_;
+
+    my($connection);
+
+    if($self->{'connect_error_handler'}) {
+	eval {
+	    $connection = $self->connect_1();
+	};
+	if($@) {
+	    my($error) = $@;
+	    my($handler) = $self->{'connect_error_handler'};
+	    &$handler('mysql', $error);
+	}
+    } else {
+	$connection = $self->connect_1();
+    }
+    return $connection;
+}
+
+sub connect_1 {
     my($self) = @_;
 
     if(!defined($self->{'connection'})) {

@@ -17,7 +17,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /spare2/ecila-cvsroot/perltools/main.pm,v 1.8 1999/04/30 17:17:39 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/tools/main.pm,v 1.8 1999/04/30 17:17:39 ecila40 Exp $
 #
 # 
 #

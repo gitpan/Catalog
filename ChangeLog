@@ -1,3 +1,9 @@
+1999-05-18  Loic Dachary  <loic@ceic.com>
+
+	* Catalog-0.10 release
+
+	* Fixed wrong use + added connect_error_handler in db.pm/sqledit.pm
+
 1999-05-17  Loic Dachary  <loic@ceic.com>
 
 	* Catalog-0.9 release

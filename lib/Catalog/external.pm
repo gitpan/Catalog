@@ -16,7 +16,7 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
-# $Header: /spare2/ecila-cvsroot/Catalog/lib/Catalog/external.pm,v 1.4 1999/05/15 14:20:48 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/external.pm,v 1.4 1999/05/15 14:20:48 ecila40 Exp $
 #
 package Catalog::external;
 

@@ -1,5 +1,5 @@
 #
-# $Header: /spare2/ecila-cvsroot/Catalog/t/03dmoz.t,v 1.4 1999/05/15 14:20:50 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/t/03dmoz.t,v 1.4 1999/05/15 14:20:50 ecila40 Exp $
 #
 use strict;
 

@@ -97,14 +97,18 @@ sub main {
 sub run {
     my($cmd) = @_;
 
-    pause("Press return to proceed or ctrl-c to cancel\n$cmd");
-    system($cmd);
+    my($input) = pause("Press return to proceed, s to skip or ctrl-c to cancel\n$cmd ");
+    if($input !~ /^s/io) {
+	system($cmd);
+    }
 }
 
 sub pause {
     my($msg) = @_;
     print $msg;
-    scalar(<>);
+    my($input) = scalar(<>);
+    chop($input);
+    return $input;
 }
 
 sub cvsinfo {

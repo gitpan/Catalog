@@ -5,8 +5,8 @@
 @setchapternewpage odd
 @c %**end of header
 
-@set RCSID $Id: catalog.texinfo,v 1.23 1999/05/17 10:13:40 ecila40 Exp $
-@set VERSION 0.9
+@set RCSID $Id: catalog.texinfo,v 1.24 1999/05/18 18:51:04 loic Exp $
+@set VERSION 0.10
 @set UPDATED May 1999
 @set PERL perl5.005_02
 @set MySQL MySQL-3.22.19a-gamma

@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /spare2/ecila-cvsroot/Catalog/lib/Catalog/path.pm,v 1.2 1999/04/30 08:40:29 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/path.pm,v 1.2 1999/04/30 08:40:29 ecila40 Exp $
 #
 # 
 package Catalog::path;

@@ -348,7 +348,7 @@ sub now {
     my($self) = @_;
     my($mysql) = $self->{'mysql'};
 
-    return "DATE '" . $mysql->Ecila::tools::mysql::date(time()) . "'";
+    return "DATE '" . $mysql->Ecila::db::date(time()) . "'";
 }
 
 sub query2sql {
