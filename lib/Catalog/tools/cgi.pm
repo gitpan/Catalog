@@ -17,7 +17,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 package Ecila::tools::cgi;
-use vars qw(@ISA $random);
+use vars qw(@ISA $random %char2quote);
 use strict;
 
 use CGI;
@@ -230,4 +230,38 @@ sub params_format {
     }
 
     return $html;
+}
+
+%char2quote = (
+			       '>' => '&gt;',
+			       '<' => '&lt;',
+			       '&' => '&amp;',
+			       "'" => '&#39;',
+			       '"' => '&quot;',
+			       );
+
+sub myescapeHTML {
+    my($toencode) = @_;
+
+    return undef if(!defined($toencode));
+
+    $toencode =~ s;([&\"<>\']);$char2quote{$1};ge;
+    return $toencode;
+}
+
+sub myunescapeHTML {
+    my($string) = @_;
+    return undef if(!defined($string));
+    # thanks to Randal Schwartz for the correct solution to this one
+    $string =~ s[&(.*?);]{
+	local $_ = $1;
+	/^amp$/i	? "&" :
+	/^quot$/i	? '"' :
+        /^gt$/i		? ">" :
+	/^lt$/i		? "<" :
+	/^#(\d+)$/	? chr($1) :
+	/^#x([0-9a-f]+)$/i ? chr(hex($1)) :
+	$_
+	}gex;
+    return $string;
 }

@@ -210,9 +210,13 @@ sub initialize {
 	}
     }
     %$self = (%$self, %$config) if(defined($config));
+    $config = config_load("install.conf");
+    %$self = (%$self, %$config) if(defined($config));
 
     $self->{'params'} = [ 'table', 'links_set', 'stack', 'context', 'conf', 'order', 'style', 'limit' ];
     $self->{'templates'} = { %default_templates };
+
+    $self->special_auth_initialize();
 }
 
 sub run {
@@ -268,12 +272,19 @@ sub selector {
 	$cgi->param('pathname', $pathname);
     }
     my($content) = $cgi->param('content') || "text/html";
+    #
+    # Unbuffered output so that gauge() shows
+    #
+    $| = 1;
     $cgi->nph(1) if(exists($self->{'nph'}) && $self->{'nph'} eq 'yes');
     print $cgi->header(-type => $content);
     if($context !~ /^[\w_]+$/io) {
 	print "$context is not a valid context";
 	return "";
     }
+
+    return "" if(!$self->special_auth($cgi));
+
     if(exists($self->{'context_allow'}) &&
        ( $self->{'context_allow'} eq '*' ||
 	 $self->{'context_allow'} !~ /\b$context\b/)) {
@@ -282,8 +293,9 @@ sub selector {
     }
     my($html);
     my($error);
-    eval "\$html = \$self->${context}(\$cgi)";
-#    $html = $self->${context}($cgi);
+    eval {
+	$html = $self->${context}($cgi);
+    };
     if($@) {
 	$error = $@;
 	if($error !~ /HTMLIZED/) {
@@ -310,6 +322,57 @@ sub selector {
     }
 
     return $html;
+}
+
+#
+# Undocumented feature specific to CFCE
+#
+sub special_auth {
+    my($self, $cgi) = @_;
+
+    if(exists($self->{'special_auth'})) {
+	my($spec) = $self->{'special_auth'};
+	my($password) = $cgi->param($spec->{'param'});
+	if(!defined($password)) {
+	    print istring("special_auth: missing %s", $spec->{'param'});
+	    return 0;
+	}
+	my($today) = $self->date(time());
+	my($row);
+	eval {
+	    $row = $self->exec_select_one("select * from $spec->{'table'} where $spec->{'field_date'} = '$today' and $spec->{'field_password'} = '$password'");
+	};
+	if($@) {
+	    my($error) = $@;
+	    print istring("special_auth: cannot query table : %s", $error);
+	    return 0;
+	}
+	if(!defined($row)) {
+	    print istring("special_auth: permission denied");
+	    return 0;
+	}
+    }
+    return 1;
+}
+
+sub special_auth_initialize {
+    my($self) = @_;
+
+    if(exists($self->{'special_auth'})) {
+	my($param) = $self->{'special_auth'}->{'param'};
+	push(@{$self->{'params'}}, $param);
+    }
+}
+
+#
+# Output characters so that the Navigator shows activity during
+# a lengthy process. This prevents timeout and provides feedback 
+# to the user.
+#
+sub gauge {
+    my($self) = @_;
+
+    print " " if(exists($self->{'cgi'}));
 }
 
 #
@@ -621,7 +684,7 @@ sub row2edit_1 {
 	my($desc) = $info->{$field};
 	my($type) = $desc->{'type'};
 	my($value) = defined($row) ? $row->{$field} : undef;
-	my($value_quoted) = defined($value) ? CGI::escapeHTML($value) : '';
+	my($value_quoted) = defined($value) ? Ecila::tools::cgi::myescapeHTML($value) : '';
 	if($type eq 'char') {
 	    my($size);
 	    if($desc->{'size'} < 2) {
@@ -699,7 +762,7 @@ sub row2view {
     my($field);
     foreach $field (@$fields) {
 	my($value) = $row->{$field};
-	my($quoted_value) = CGI::escapeHTML($row->{$field});
+	my($quoted_value) = Ecila::tools::cgi::myescapeHTML($row->{$field});
 	if($style eq 'short') {
 	    $html .= "<td>";
 	} else {
@@ -710,7 +773,7 @@ sub row2view {
 	if(defined($value)) {
 	    if($type eq 'char') {
 		if($style eq 'short' && length($value) > 30) {
-		    $quoted_value = CGI::escapeHTML(substr($value, 0, 30)) . "...";
+		    $quoted_value = Ecila::tools::cgi::myescapeHTML(substr($value, 0, 30)) . "...";
 		}
 	    } elsif($type eq 'blob' && defined($value)) {
 		my($imageutil) = $self->{'imageutil'};
@@ -942,7 +1005,7 @@ sub row2assoc_1 {
 	} elsif(defined($value)) {
 	    $value = '' if(!defined($value));
 	    if($form eq 'QUOTED') {
-		$assoc->{$tag} = CGI::escapeHTML($value);
+		$assoc->{$tag} = Ecila::tools::cgi::myescapeHTML($value);
 	    } elsif($form eq 'CODED') {
 		$assoc->{$tag} = CGI::escape($value);
 	    } else {
@@ -2290,7 +2353,7 @@ sub confedit {
     my($cols) = $cgi->param('cols') || 80;
 
     my($template) = $self->template("edit");
-    template_set($template->{'assoc'}, '_TEXT_', CGI::escapeHTML($text));
+    template_set($template->{'assoc'}, '_TEXT_', Ecila::tools::cgi::myescapeHTML($text));
     template_set($template->{'assoc'}, '_COMMENT_', $comment);
     template_set($template->{'assoc'}, '_ROWS_', $rows);
     template_set($template->{'assoc'}, '_COLS_', $cols);

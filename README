@@ -1,10 +1,10 @@
-$Id: README,v 1.4 1999/02/02 15:24:42 ecila40 Exp $
+$Id: README,v 1.6 1999/04/14 11:48:06 ecila40 Exp $
 
 What is it ?
 ------------
 Catalog is a perl program that allows to create, maintain and display
-Yahoo! like directories. The user interface is 100% HTML. It requires an
-SQL database to run (typically MySQL, Msql, Postgres or GNUsql). 
+Yahoo! like directories. The user interface is 100% HTML. It requires a
+MySQL database to run.
 
 The general idea behind the design of Catalog is that creating a catalog
 is mainly a matter of organizing objects in a structured tree. For
@@ -12,6 +12,24 @@ Catalog the objects are records in a table of the SQL database.
 The structured tree is a set of tree nodes and relations between these
 nodes. The maintainer of the catalog is in charge of building the tree
 and placing objects in this tree.
+
+Here is a short list of the functions provided by Catalog:
+
+* Display structured trees of resources.
+* Display chronologically ordered resources and associated calendar.
+* Display alphabetical indexes of resources.
+* Allow full text search in the resources and the category names.
+* Powerful HTML based administration of catalogs.
+* On-Line editing of resource records.
+* Handle an arbitrary number of catalogs.
+* High performances using mod_perl and Apache.
+* Easy customization of the user view using HTML template files.
+* It is possible to define more than one view of the same catalog.
+* Load and unload a thematic catalog in XML.
+* Create an HTML dump of a structured tree to publish a static 
+  version.
+* Complete documentation including a guide and a reference manual.
+* Ready to use example.
 
 Where is the documentation ?
 ----------------------------
@@ -23,7 +41,6 @@ install Catalog, you can take a look at http://www.senga.org/.
 How to install it ?
 -------------------
 See the INSTALL file for installation instructions.
-
 
 Where is it installed ?
 -----------------------

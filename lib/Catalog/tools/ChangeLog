@@ -1,3 +1,25 @@
+1999-04-14  Loic Dachary  <loic@ceic.com>
+
+	* sqledit.pm (special_auth_initialize): added special_auth for CFCE
+
+1999-04-13  Loic Dachary  <loic@ceic.com>
+
+	* sqledit.pm (selector): fix eval and error handling weirdness.
+
+1999-04-08  Loic Dachary  <loic@ceic.com>
+
+	* sqledit.pm (selector): added gauge() function
+
+	* cgi.pm (myunescapeHTML): change wrong &acute; to &#39;
+
+1999-04-07  Loic Dachary  <loic@ceic.com>
+
+	* mysql.pm (table_schema): add table_schema function
+
+1999-03-25  Loic Dachary  <loic@ceic.com>
+
+	* cgi.pm (myunescapeHTML): fix unescape & escape for &acute;
+
 1999-03-08  root  <root@transparens-1.clients.easynet.fr>
 
 	* sqledit.pm (selector): detect PATH_INFO and build pathcontext

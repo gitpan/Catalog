@@ -18,25 +18,14 @@ print OUT <<'!NO!SUBS!';
 
 use strict;
 
-use Catalog;
+use Catalog::dmoz;
+#
+# BUG WORKAROUND: DBI-1.06 + XML-Parser-2.22 + Perl-5.005_02
+# Should be fixed in the next version of Perl.
+#
+use FileHandle;
 
-Catalog->selector();
-
-__END__
-
-=head1 NAME
-
-Catalog - Resources catalog management and display
-
-=head1 DESCRIPTION
-
-Catalog is the cgi-bin interface to all the functionalities. 
-For a complete documentation about Catalog, see the installed
-HTML documentation or the on-line documentation at http://www.senga.org/.
-
-=head1 AUTHOR
-
-Loic Dachary (loic@seng.org) http://www.senga.org/
+Catalog::dmoz->selector();
 
 !NO!SUBS!
 

@@ -1,21 +1,25 @@
-all: all_info catalog_toc.html catalog.ps
+include ../conf/install.conf
+
+all: $(doc_all)
 
 all_info: catalog.info
 
 all_html: catalog_toc.html
 
-IMAGES_GIF = $(shell echo images/*.gif)
+all_ps: catalog.ps
+
+IMAGES_GIF = $(shell find images/*.gif -print | grep -v images/fct)
 IMAGES_EPS = $(patsubst %.gif,%.eps,$(IMAGES_GIF))
 IMAGES_TXT = $(patsubst %.gif,%.txt,$(IMAGES_GIF))
 
 catalog.ps: catalog.texinfo $(IMAGES_EPS) $(IMAGES_TXT)
-	texi2dvi catalog.texinfo
-	dvips -o catalog.ps catalog.dvi
+	$(texi2dvi) catalog.texinfo
+	$(dvips) -o catalog.ps catalog.dvi
 
 catalog_toc.html: catalog.texinfo
 	rm -fr tmp ; mkdir tmp ; cd tmp ; ln -s ../images .
 	perl -p -e 's/^\s*\@/\@/' < catalog.texinfo > tmp/catalog.texinfo
-	cd tmp ; texi2html -acc -split_node catalog.texinfo ; rm catalog.texinfo images ; mv * ..
+	cd tmp ; $(texi2html) -acc -split_node catalog.texinfo ; rm catalog.texinfo images ; mv * ..
 	rm -fr tmp
 
 #
@@ -23,35 +27,35 @@ catalog_toc.html: catalog.texinfo
 #
 catalog.info: catalog.texinfo # $(IMAGES_TXT)
 	grep -v '@image' < catalog.texinfo > c.texinfo 
-	makeinfo c.texinfo
+	$(makeinfo) c.texinfo
 	rm -f c.texinfo
 
-install: all
-	$(MAKE) install_html
-	$(MAKE) install_info
+install: $(doc_install)
 
 install_info: all_info
-	cp catalog.info* $(INFODIR)
-	if [ -w $(INFODIR)/dir ] ; \
+	cp catalog.info* $(infodir)
+	if [ -w $(infodir)/dir ] ; \
 	then \
-		if grep 'Catalog:' $(INFODIR)/dir > /dev/null ; \
+		if grep 'Catalog:' $(infodir)/dir > /dev/null ; \
 		then : ; \
 		else \
-			if [ ! -f $(INFODIR)/dir.gz -o -w $(INFODIR)/dir.gz ] ; \
+			if [ ! -f $(infodir)/dir.gz -o -w $(infodir)/dir.gz ] ; \
 			then \
-				echo '* Catalog: (catalog)	HTML based resource directory builder' >> $(INFODIR)/dir ; \
-				if [ -f $(INFODIR)/dir.gz ] ; \
+				echo '* Catalog: (catalog)	HTML based resource directory builder' >> $(infodir)/dir ; \
+				if [ -f $(infodir)/dir.gz ] ; \
 				then \
-					gzip < $(INFODIR)/dir > $(INFODIR)/dir.gz ; \
+					gzip < $(infodir)/dir > $(infodir)/dir.gz ; \
 				fi ; \
 			fi ; \
 		fi ; \
 	fi
 
-install_html: all_html
-	cp catalog_*.html $(HTMLDIR)
-	if [ ! -d $(HTMLDIR)/images ] ; then mkdir -p $(HTMLDIR)/images ; fi
-	cp images/*.gif $(HTMLDIR)/images
+install_html: all_html 
+	cp catalog_*.html $(htmldir)
+	if [ ! -d $(htmldir)/images ] ; then mkdir -p $(htmldir)/images ; fi
+	cp images/*.gif $(htmldir)/images
+
+install_ps:
 
 clean:
 	rm -f catalog.aux catalog.cp catalog.dvi catalog.fn 
@@ -61,6 +65,18 @@ clean:
 	rm -f catalog_*.html catalog.info-? texput.log
 	rm -f $(IMAGES_EPS) $(IMAGES_TXT)
 	rm -fr tmp
+
+fctimages:
+	pstopnm -xsize 1000 -portrait images/fctcatalog.eps 
+	ppmtogif < fctcatalog.eps001.ppm > images/fctcatalog.gif
+	rm -f fctcatalog.eps001.ppm
+	echo "[fctcatalog image]" > images/fctcatalog.txt
+	pstopnm -portrait images/fctsqledit.eps 
+	ppmtogif < fctsqledit.eps001.ppm > images/fctsqledit.gif
+	rm -f fctsqledit.eps001.ppm
+	echo "[fctslqedit image]" > images/fctsqledit.txt
+
+realclean:
 
 test:
 

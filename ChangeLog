@@ -1,3 +1,60 @@
+1999-04-14  Loic Dachary  <loic@ceic.com>
+
+	* Catalog-0.5 release
+
+	* doc/catalog.texinfo : update documentation
+
+1999-04-13  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog.pm : added cimport.html cexport.html and associated 
+	actions. Added start theme in control_panel.
+
+1999-04-12  Loic Dachary  <loic@ceic.com>
+
+	* complete rebuild of Makefiles & configuration mechanism
+
+	* conf/install.conf: created for install parameters, loaded by sqledit
+
+1999-04-09  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog.pm: clarify and cache cinfo() results
+
+	* lib/Catalog.pm: fix counter efficient SQL requests
+
+1999-04-08  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog.pm: added gauge for lengthy process
+
+	* finish XML load/unload 
+
+1999-04-06  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog.pm (string2words): add encoding option
+
+	* Makefile.PL: add HOST env variable
+
+1999-03-25  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog.pm (cimport_real): implement RDF import
+
+	* lib/Catalog.pm (cedit_1): add missing pathcheck
+
+	* lib/Catalog.pm : change escapeHTML by myescapeHTML for &acute;
+
+1999-03-19  Loic Dachary  <loic@loic.ceic.com>
+
+	* Makefile.PL: require perl-5.005
+
+1999-03-18  Ecila 4.10  <ecila40@newsun>
+
+	* lib/Catalog.pm: fix ' and " in category names
+
+	* lib/Catalog.pm: fix escapeHTML because it didn't escape the '
+
+1999-03-16  Loic Dachary  <loic@loic.ceic.com>
+
+	* Catalog-0.4 release
+
 1999-03-15  Loic Dachary  <loic@loic.ceic.com>
 
 	* doc/catalog.texinfo: fully comment the example provided

@@ -1,43 +1,48 @@
 BASE = catalog_example
 
-include ../config.cache
+include ../conf/install.conf
+include ../conf/mysql.conf
 
 all:
 
 install:
-	rm -fr $(HTMLDIR)/index.html $(CGIDIR)/browse $(CGIDIR)/admin
-	perl -p -e 's|_CGIPATH_|$(CGIPATH)|g' < index.html > $(HTMLDIR)/index.html
-	cp -rp admin browse $(CGIDIR)
-	cd $(CGIDIR)/browse ; \
-	cp $(CGIDIR)/Catalog . ; \
-	perl -p -e 's|^base.*|base = $(BASE)|' < $(CONFIG_DIR)/mysql.conf > mysql.conf ; \
+	rm -fr $(htmldir)/index.html $(cgidir)/browse $(cgidir)/admin
+	perl -p -e 's|_CGIPATH_|$(cgipath)|g' < index.html > $(htmldir)/index.html
+	cp -rp admin browse $(cgidir)
+	cd $(cgidir)/browse ; \
+	cp $(cgidir)/Catalog . ; \
+	perl -p -e 's|^base.*|base = $(BASE)|' < $(config_dir)/mysql.conf > mysql.conf ; \
 	ln -s ../cgi.conf . ; \
-	perl -pi -e 's|_HTMLPATH_|$(HTMLPATH)|' sqledit.conf
-	cd $(CGIDIR)/admin ; \
-	cp $(CGIDIR)/Catalog . ; \
-	perl -p -e 's|^base.*|base = $(BASE)|' < $(CONFIG_DIR)/mysql.conf > mysql.conf ; \
+	perl -pi -e 's|_HTMLPATH_|$(htmlpath)|' sqledit.conf
+	cd $(cgidir)/admin ; \
+	cp $(cgidir)/Catalog . ; \
+	perl -p -e 's|^base.*|base = $(BASE)|' < $(config_dir)/mysql.conf > mysql.conf ; \
 	ln -s ../cgi.conf . ; \
-	perl -pi -e 's|_HTMLPATH_|$(HTMLPATH)|' sqledit.conf
+	perl -pi -e 's|_HTMLPATH_|$(htmlpath)|' sqledit.conf
 	$(MAKE) load
 
 clean:
+
+realclean:
 
 TABLES_ALL = catalog catalog_category2category_urlcatalog catalog_category_urlcatalog catalog_entry2category_urlcatalog catalog_path_urlcatalog catalog_alpha_urlalpha urldemo
 TABLES_STRUCTURE = catalog_date_urldate
 
 load:
-	@if mysql $(MYSQL_OPT) -e "create database $(BASE)" 2>/dev/null ; \
+	@if mysql $(cmd_opt) -e "create database $(BASE)" 2>/dev/null ; \
 	then \
-		mysql $(MYSQL_OPT) $(BASE) < example.sql ; \
-		mysql $(MYSQL_OPT) -e "update catalog set updated = 0" $(BASE) < example.sql ; \
+		mysql $(cmd_opt) $(BASE) < example.sql ; \
+		mysql $(cmd_opt) -e "update catalog set updated = 0" $(BASE) < example.sql ; \
 		echo "The example database has been loaded." ; \
 	else \
 		echo "Example not loaded because the base $(BASE) exists." ; \
 	fi
 
 dump:
-	mysqldump $(MYSQL_OPT) $(BASE) $(TABLES_ALL) > example.sql
-	mysqldump $(MYSQL_OPT) --no-data $(BASE) $(TABLES_STRUCTURE) >> example.sql
+	mysqldump $(cmd_opt) $(BASE) $(TABLES_ALL) > example.sql
+	mysqldump $(cmd_opt) --no-data $(BASE) $(TABLES_STRUCTURE) >> example.sql
 
 drop:
-	mysql $(MYSQL_OPT) -e "drop database $(BASE)"
+	mysql $(cmd_opt) -e "drop database $(BASE)"
+
+test:

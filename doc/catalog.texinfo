@@ -1,29 +1,15 @@
 \input texinfo                @c -*- Texinfo -*-
-@c modify install to depend on MD5, add in distribution, add mod_perl 1.18 + instructions
-@c usage of example : <location> for Catalog
-@c <Location /Catalog/example/Catalog>
-@c SetHandler cgi-script
-@c Options ExecCGI
-@c </Location>
-@c <Location /Catalog/example/Catalog>
-@c SetHandler perl-script
-@c PerlSendHeader On
-@c PerlHandler Apache::Registry
-@c Options ExecCGI
-@c bug report CGI.pm path_info is / -> broken
-@c </Location>
-@c The __END__ is a problem when using mod_perl
 @c %**start of header
 @setfilename catalog.info
 @settitle @code{Catalog}
 @setchapternewpage odd
 @c %**end of header
 
-@set RCSID $Id: catalog.texinfo,v 1.19 1999/03/16 12:41:34 ecila40 Exp $
-@set VERSION 0.4
-@set UPDATED March 1999
-@set PERL perl5.005
-@set MySQL MySQL-3.22.16a-gamma
+@set RCSID $Id: catalog.texinfo,v 1.21 1999/04/14 11:29:44 ecila40 Exp $
+@set VERSION 0.5
+@set UPDATED April 1999
+@set PERL perl5.005_02
+@set MySQL MySQL-3.22.19a-gamma
 
 @c Combine the variable and function indices:
 @syncodeindex vr fn
@@ -69,12 +55,13 @@ MySQL database to run.
 * Introduction::                Introduction
 * Getting Catalog::             Getting Catalog
 * Setup::                       Setup
-* Migration to Catalog-0.4::    
+* Migration to Catalog-0.5::    Migration to Catalog-0.5
 * First use::                   First use
-* Catalog management guide::    
+* Catalog management guide::    Catalog management guide
 * Full text search::            Full text search
 * Catalog tables::              Catalog tables
 * Configuration files::         Configuration Files
+* External representation::     External representation
 * Template files introduction::  Template files introduction
 * Catalog template files::      Catalog template files
 * SQL template files::          SQL template files
@@ -99,28 +86,27 @@ First use
 * Catalog editing::             Catalog editing
 * Inserting entries::           Inserting entries
 * Browsing::                    Browsing
-* Customizing pages::           Customizing pages
 * Conclusion::                  Conclusion
 
 Catalog management guide
 
-* Goal::                        
+* Goal::                        Goal
 * Create a table::              Create a table
-* Example installed::           
-* Quick tour::                  
-* Records ordering::            
-* Record layout (urlcatalog)::  
-* Overriding a template (urlcatalog)::  
-* Customizing user view (urlcatalog)::  
-* Customizing search results (urlcatalog)::  
-* Customizing chronological browsing (urldate)::  
-* Customizing alphabetical browsing (urlalpha)::  
-* More customization::          
+* Example installed::           Example installed
+* Quick tour::                  Quick tour
+* Records ordering::            Records ordering
+* Record layout (urlcatalog)::  Record layout (urlcatalog)
+* Overriding a template (urlcatalog)::  Overriding a template (urlcatalog)
+* Customizing user view (urlcatalog)::  Customizing user view (urlcatalog)
+* Customizing search results (urlcatalog)::  Customizing search results (urlcatalog)
+* Customizing chronological browsing (urldate)::  Customizing chronological browsing (urldate)
+* Customizing alphabetical browsing (urlalpha)::  Customizing alphabetical browsing (urlalpha)
+* More customization::          More customization
 
 Full text search
 
-* Default full text::           
-* Real full text::              
+* Default full text::           Default full text
+* Real full text::              Real full text
 
 Catalog tables
 
@@ -129,18 +115,26 @@ Catalog tables
 * catalog_category_<name>::     catalog_category_<name>
 * catalog_category2category_<name>::  catalog_category2category_<name>
 * catalog_entry2category_<name>::  catalog_entry2category_<name>
-* catalog_path_<name>::         
+* catalog_path_<name>::         catalog_path_<name>
 * catalog_alpha_<name>::        catalog_alpha_<name>
-* catalog_date_<name>::         
+* catalog_date_<name>::         catalog_date_<name>
 
 Configuration files
 
 * Catalog configuration file::  Catalog configuration file
 * MySQL configuration file::    MySQL configuration file
 * CGI configuration file::      CGI configuration file
+* Install configuration file::  Install configuration file
 * SQL editor configuration file::  SQL editor configuration file
 * Template configuration file::  Template configuration file
 * Hook Fulcrum configuration file::  Hook Fulcrum configuration file
+
+External representation
+
+* XML short example::           XML short example
+* XML document encoding::       XML document encoding
+* XML structure::               XML structure
+* dmoz.org::                    dmoz.org
 
 Template files introduction
 
@@ -149,6 +143,7 @@ Template files introduction
 * Database table tags::         database table tags
 * Record list part::            Record list part
 * Multipage results template::  Multipage results template
+* Actions that takes a long time::  Actions that takes a long time
 
 Catalog template files
 
@@ -158,17 +153,19 @@ Catalog template files
 * cedit.html::                  cedit.html
 * cbrowse_root.html::           cbrowse_root.html
 * cbrowse.html::                cbrowse.html
-* csearch.html::                
-* cdate_default.html::          
+* csearch.html::                csearch.html
+* cdate_default.html::          cdate_default.html
 * cdestroy.html::               cdestroy.html
 * centryremove_all.html::       centryremove_all.html
-* catalog_theme_insert.html::   
-* catalog_theme_edit.html::     
-* catalog_alpha_insert.html::   
-* catalog_alpha_edit.html::     
-* catalog_date_insert.html::    
-* catalog_date_edit.html::      
-* cdump.html::                  
+* catalog_theme_insert.html::   catalog_theme_insert.html
+* catalog_theme_edit.html::     catalog_theme_edit.html
+* catalog_alpha_insert.html::   catalog_alpha_insert.html
+* catalog_alpha_edit.html::     catalog_alpha_edit.html
+* catalog_date_insert.html::    catalog_date_insert.html
+* catalog_date_edit.html::      catalog_date_edit.html
+* cdump.html::                  cdump.html
+* cimport.html::                cimport.html
+* cexport.html::                cexport.html
 
 SQL template files
 
@@ -190,7 +187,7 @@ CGI introduction
 * Database table parameters::   Database table parameters
 * Primary parameter::           Primary parameter
 * Recursive CGI call::          Recursive CGI call
-* CGI called with PATH_INFO::   
+* CGI called with PATH_INFO::   CGI called with PATH_INFO
 * Multipage results parameters::  Multipage results parameters
 
 Catalog CGI
@@ -202,13 +199,13 @@ Catalog CGI
 * Reset count on theme catalog (category_count)::  Reset count on theme catalog (category_count)
 * Build a new catalog (cbuild)::  Build a new catalog (cbuild)
 * Modify catalog properties (ccatalog_edit)::  Modify catalog properties (ccatalog_edit)
-* Browse alphabetical catalog root (calpha)::  
-* Browse alphabetical catalog (calpha)::  
+* Browse alphabetical catalog root (calpha)::  Browse alphabetical catalog root (calpha)
+* Browse alphabetical catalog (calpha)::  Browse alphabetical catalog (calpha)
 * Browse theme catalog root (cbrowse_root)::  Browse theme catalog root (cbrowse_root)
 * Browse theme catalog (cbrowse)::  Browse theme catalog (cbrowse)
-* Intuitive navigation (pathcontext)::  
-* Catalog search (csearch)::    
-* Browse chronological catalog (cdate)::  
+* Intuitive navigation (pathcontext)::  Intuitive navigation (pathcontext)
+* Catalog search (csearch)::    Catalog search (csearch)
+* Browse chronological catalog (cdate)::  Browse chronological catalog root (cdate)
 * Edit panel for a category node (cedit)::  Edit panel for a category node (cedit)
 * Remove a category (categoryremove)::  Remove a category (categoryremove)
 * Insert a category (categoryinsert)::  Insert a category (categoryinsert)
@@ -218,8 +215,12 @@ Catalog CGI
 * Unlink a catalog entry (centryremove)::  Unlink a catalog entry (centryremove)
 * Ask to remove a catalog entry (centryremove_all)::  Ask to remove a catalog entry (centryremove_all)
 * Remove a catalog entry (centryremove_all_confirm)::  Remove a catalog entry (centryremove_all_confirm)
-* Ask for confirmation before dump (cdump)::  
-* Dump a thematic catalog (cdump_confirm)::  
+* Ask for confirmation before dump (cdump)::  Ask for confirmation before dump (cdump)
+* Dump a thematic catalog (cdump_confirm)::  Dump a thematic catalog (cdump_confirm)
+* Query parameters for load (cimport)::  Query parameters for load (cimport)
+* Load a thematic catalog from file (cimport_confirm)::  Load a thematic catalog from file (cimport_confirm)
+* Query parameters for unload (cexport)::  Query parameters for unload (cexport)
+* Unload a thematic catalog to file (cexport_confirm)::  Unload a thematic catalog to file (cexport_confirm)
 
 SQL manipulation CGI
 
@@ -294,6 +295,8 @@ Easy customization of the user view using HTML template files.
 @item
 It is possible to define more than one view of the same catalog.
 @item
+Load and unload a thematic catalog in XML.
+@item
 Create an HTML dump of a structured tree to publish a static 
 version.
 @item
@@ -331,7 +334,7 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-@node Setup, Migration to Catalog-0.4, Getting Catalog, Top
+@node Setup, Migration to Catalog-0.5, Getting Catalog, Top
 @chapter Setup
 
 @cindex setup
@@ -397,11 +400,11 @@ The @strong{Catalog management guide} chapter will show you how to build
 a fully functional catalog, using an example installed with @strong{Catalog},
 @xref{Catalog management guide,,@code{Catalog management guide}}.
 
-@node Migration to Catalog-0.4, First use, Setup, Top
-@chapter Migration to Catalog-0.4
+@node Migration to Catalog-0.5, First use, Setup, Top
+@chapter Migration to Catalog-0.5
 
-The database structure of @strong{Catalog-0.4} is not compatible with previous versions of
-@strong{Catalog}.
+The database structure of @strong{Catalog-0.5} is not compatible with versions of
+@strong{Catalog} under version 0.3.
 Migration is quite straight forward, however.
 
 The new table @strong{catalog_path_<name>} will be created automatically, no manipulation is
@@ -415,7 +418,7 @@ alter table catalog add dump varchar(255);
 alter table catalog add dumplocation varchar(255);
 @end example
 
-@node First use, Catalog management guide, Migration to Catalog-0.4, Top
+@node First use, Catalog management guide, Migration to Catalog-0.5, Top
 @chapter First use
 
 We will guide you on a step by step tour of the Catalog functionalities. This
@@ -431,7 +434,6 @@ During all the tour the machine name taken in example will be
 * Catalog editing::             Catalog editing
 * Inserting entries::           Inserting entries
 * Browsing::                    Browsing
-* Customizing pages::           Customizing pages
 * Conclusion::                  Conclusion
 @end menu
 
@@ -559,18 +561,18 @@ a ready to use example.
 @chapter Catalog management guide
 
 @menu
-* Goal::                        
+* Goal::                        Goal
 * Create a table::              Create a table
-* Example installed::           
-* Quick tour::                  
-* Records ordering::            
-* Record layout (urlcatalog)::  
-* Overriding a template (urlcatalog)::  
-* Customizing user view (urlcatalog)::  
-* Customizing search results (urlcatalog)::  
-* Customizing chronological browsing (urldate)::  
-* Customizing alphabetical browsing (urlalpha)::  
-* More customization::          
+* Example installed::           Example installed
+* Quick tour::                  Quick tour
+* Records ordering::            Records ordering
+* Record layout (urlcatalog)::  Record layout (urlcatalog)
+* Overriding a template (urlcatalog)::  Overriding a template (urlcatalog)
+* Customizing user view (urlcatalog)::  Customizing user view (urlcatalog)
+* Customizing search results (urlcatalog)::  Customizing search results (urlcatalog)
+* Customizing chronological browsing (urldate)::  Customizing chronological browsing (urldate)
+* Customizing alphabetical browsing (urlalpha)::  Customizing alphabetical browsing (urlalpha)
+* More customization::          More customization
 @end menu
 
 @node Goal, Create a table, Catalog management guide, Catalog management guide
@@ -1009,11 +1011,15 @@ shown in the following figures:
 @itemize @bullet
 @item
 The root of the catalog.
+
 @image{images/examplecbrowse2,10cm,}
 
 @item 
 The display of a category containing records.
+
 @image{images/examplecbrowse3,10cm,}
+
+@end itemize
 
 There are two differences between the administration interface for at thematic catalog and its
 user view:
@@ -1853,8 +1859,8 @@ to fit your needs.
 @chapter Full text search
 
 @menu
-* Default full text::           
-* Real full text::              
+* Default full text::           Default full text
+* Real full text::              Real full text
 @end menu
 
 @node Default full text, Real full text, Full text search, Full text search
@@ -1871,6 +1877,14 @@ This basically means that only the isolated @code{foobar} word will be found and
 word @code{foobarnitz}, @xref{Catalog search (csearch),,@code{Catalog search (csearch)}}. 
 
 This method can be really slow if the catalog contains a lot of data. We are working on this.
+
+If the encoding of the catalog is not ISO-8859-* a the query is taken to
+be only one word and is searched using the SQL truncation operators, 
+@xref{Catalog configuration file, ,@code{Catalog configuration file}}. 
+
+@example
+like '%word1 word2%'
+@end example
 
 @node Real full text,  , Default full text, Full text search
 @section Real full text
@@ -1891,9 +1905,9 @@ to tune.
 * catalog_category_<name>::     catalog_category_<name>
 * catalog_category2category_<name>::  catalog_category2category_<name>
 * catalog_entry2category_<name>::  catalog_entry2category_<name>
-* catalog_path_<name>::         
+* catalog_path_<name>::         catalog_path_<name>
 * catalog_alpha_<name>::        catalog_alpha_<name>
-* catalog_date_<name>::         
+* catalog_date_<name>::         catalog_date_<name>
 @end menu
 
 @node Catalog tables introduction, catalog, Catalog tables, Catalog tables
@@ -2176,7 +2190,7 @@ create table catalog_date_NAME (
 )
 @end example
 
-@node Configuration files, Template files introduction, Catalog tables, Top
+@node Configuration files, External representation, Catalog tables, Top
 @chapter Configuration files
 
 The @strong{Catalog} software is made of separate Perl packages. 
@@ -2254,6 +2268,7 @@ configuration files available in @strong{Catalog}.
 * Catalog configuration file::  Catalog configuration file
 * MySQL configuration file::    MySQL configuration file
 * CGI configuration file::      CGI configuration file
+* Install configuration file::  Install configuration file
 * SQL editor configuration file::  SQL editor configuration file
 * Template configuration file::  Template configuration file
 * Hook Fulcrum configuration file::  Hook Fulcrum configuration file
@@ -2330,6 +2345,13 @@ displayed,
 
   @end table
 
+@item encoding (optional, default ISO-8859-1)
+The encoding of the catalog data. It is used to convert
+data from XML files, 
+@xref{XML document encoding, ,@code{XML document encoding}}. T
+If the encoding is not the default it influences the search mechanism,
+@xref{Full text search, ,@code{Full text search}}.
+
 @end table
 
 Here is an example configuration file:
@@ -2375,6 +2397,10 @@ search
                 order = urldemo.url asc
         end
 end
+#
+# Encoding of the catalog data (default is ISO-8859-1)
+#
+#encoding = ISO-8859-1
 @end example
 
 @node MySQL configuration file, CGI configuration file, Catalog configuration file, Configuration files
@@ -2498,7 +2524,7 @@ auto_created = yes
 hook = Catalog::tools::hook_fulcrum
 @end example
 
-@node CGI configuration file, SQL editor configuration file, MySQL configuration file, Configuration files
+@node CGI configuration file, Install configuration file, MySQL configuration file, Configuration files
 @section CGI configuration file
 
 @cindex CGI derivation
@@ -2532,7 +2558,80 @@ Here is an example configuration file:
 fct_dir = /usr/local/lib/interbat/cache
 @end example
 
-@node SQL editor configuration file, Template configuration file, CGI configuration file, Configuration files
+@node Install configuration file, SQL editor configuration file, CGI configuration file, Configuration files
+@section Install configuration file
+
+@cindex Install configuration
+@cindex configuration parameters
+
+Used by the sqledit package (sqledit.pm).
+
+This configuration file is created during the installation. It is
+used by @strong{sqledit} to find the location of the @code{Catalog}
+components.
+
+@table @samp
+
+@cindex cgidir, installation parameter
+@item cgidir (optional)
+The absolute path of the cgi-bin directory.
+
+@cindex cgipath, installation parameter
+@item cgipath (optional)
+The absolute location of the cgi-bin directory.
+
+@cindex config_dir, installation parameter
+@item config_dir (optional)
+The absolute path of the directory containing configuration files.
+
+@cindex htmldir, installation parameter
+@item htmldir (optional)
+The absolute location of the cgi-bin directory.
+
+@cindex htmlpath, installation parameter
+@item htmlpath (mandatory)
+Absolute location of the @strong{Catalog} HTML material (/Catalog for 
+instance). It contains the documentation, examples and an images
+subdirectory (/Catalog/images for instance). This parameter will 
+be available with the _HTMLPATH_ tag in every template.
+
+@cindex infodir, installation parameter
+@item infodir (optional)
+The absolute path of the Emacs info directory where the
+documentation was installed.
+
+@end table
+
+Here is an example configuration file:
+
+@example
+#
+# Emacs info format documentat directory
+#
+infodir = 
+#
+# cgi-bin directory
+#
+cgidir = /home/httpd/cgi-bin
+#
+# cgi-bin directory HTML path
+#
+cgipath = /cgi-bin
+#
+# configuration files (*.conf) installation directory
+#
+config_dir = /home/httpd/cgi-bin
+#
+# Catalog material directory
+#
+htmldir = /home/httpd/html/Catalog
+#
+# Catalog material HTML path
+#
+htmlpath = /Catalog
+@end example
+
+@node SQL editor configuration file, Template configuration file, Install configuration file, Configuration files
 @section SQL editor configuration file
 
 @cindex SQL editor package 
@@ -2863,12 +2962,6 @@ of the table.
                 @end table
 
         @end table
-
-@item htmlpath (mandatory)
-Absolute location of the @strong{Catalog} HTML material (/Catalog for 
-instance). It contains the documentation, examples and an images
-subdirectory (/Catalog/images for instance). This parameter will 
-be available with the _HTMLPATH_ tag in every template.
 
 @item nph (optional, default @strong{no})
 Set it to @strong{yes} if your script is nph (non parsed header). This
@@ -3485,7 +3578,214 @@ interbat
 end
 @end example
 
-@node Template files introduction, Catalog template files, Configuration files, Top
+@node External representation, Template files introduction, Configuration files, Top
+@chapter External representation
+
+@cindex External representation
+@cindex XML format
+
+The thematic catalogs have an external representation that allow easy
+transportation of their content. The format used is XML. The file
+containing the XML representation of a catalog is named with the @code{.rdf}
+extension. When the XML/RDF conventions will be better supported the 
+catalogs will eventually use these conventions, hence the extension. 
+You should @code{not} invest too much on the current XML format because
+it is likely to change drastically in the next few monthes. Nevertheless,
+we've found very convinient to have a text representation of the catalogs,
+specially for importing data from various sources.
+
+@menu
+* XML short example::           XML short example
+* XML document encoding::       XML document encoding
+* XML structure::               XML structure
+* dmoz.org::                    dmoz.org
+@end menu
+
+@node XML short example, XML document encoding, External representation, External representation
+@section XML short example
+
+Here is a short example of an XML file
+
+@example
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<RDF xmlns:rdf="http://www.w3.org/TR/1999/REC-rdf-syntax-19990222#"
+     xmlns="http://www.senga.org/">
+
+ <Table>
+  <![CDATA[
+CREATE TABLE urldemo (
+  rowid int(11) DEFAULT '0' NOT NULL auto_increment,
+  created datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+  modified timestamp(14),
+  info enum('active','inactive') DEFAULT 'active',
+  url char(128),
+  comment char(255),
+  UNIQUE cdemo1 (rowid)
+)
+  ]]>
+ </Table>
+
+ <Catalog>
+  <navigation>theme</navigation>
+  <tablename>urldemo</tablename>
+  <name>urltheme</name>
+ </Catalog>
+
+ <Category>
+  <name>News</name>
+  <rowid>12</rowid>
+  <parent>1</parent>
+ </Category>
+
+ <Link>
+  <row>135</row>
+  <category>12</category>
+ </Link>
+
+ <Record table="urldemo">
+  <url>http://www.mediaslink.com/</url>
+  <comment>Medias Link</comment>
+  <rowid>135</rowid>
+ </Record>
+
+ <Sync/>
+</RDF>
+@end example
+
+@node XML document encoding, XML structure, XML short example, External representation
+@section XML document encoding
+
+@cindex XML document encoding
+@cindex encoding of XML document
+
+The encoding of an XML document is specified in the @code{<?xml ... ?>} line
+at the beginning. Accepted encodings are:
+
+@itemize @bullet
+
+@cindex ISO-8859-1
+@item 
+ISO-8859-1
+
+@cindex ISO-8859-2
+@item 
+ISO-8859-2
+
+@cindex ISO-8859-3
+@item 
+ISO-8859-3
+
+@cindex ISO-8859-4
+@item 
+ISO-8859-4
+
+@cindex ISO-8859-5
+@item 
+ISO-8859-5
+
+@cindex ISO-8859-6
+@item 
+ISO-8859-6
+
+@cindex ISO-8859-7
+@item 
+ISO-8859-7
+
+@cindex ISO-8859-8
+@item 
+ISO-8859-8
+
+@cindex ISO-8859-9
+@item 
+ISO-8859-9
+
+@end itemize
+
+More encodings should be available as the XML manipulation library evolve.
+
+@node XML structure, dmoz.org, XML document encoding, External representation
+@section XML structure
+
+When an element is said to describe a record it means that it contains
+elements whose name are record field names and contains the value of the
+field. For instance:
+
+@example
+<Record table=urldemo>
+ <url>http://www.senga.org/</url>
+ <comment>Senga</comment>
+</Record>
+@end example
+
+defines a record of the @strong{urldemo} table with two fields (@code{url}
+and @code{comment}) whose values are, respectively @code{http://www.senga.org/}
+and @code{Senga}.
+
+@table @samp
+
+@cindex Table XML element
+@cindex XML element : Table
+@item Table
+Contains a unique SQL order that will create a table.
+
+@cindex Catalog XML element
+@cindex XML element : Catalog
+@item Catalog
+Describes a record of the @code{catalog} table, @xref{catalog,,@code{catalog}}.
+The remaining of the file will relate to the catalog described in this element.
+There must be only one @code{Catalog} element in a given file.
+
+@cindex Category XML element
+@cindex XML element : Category
+@item Category
+Describes a record of the @code{catalog_category} table, @xref{catalog_category_<name>,,@code{catalog_category_<name>}}.
+The pseudo field @code{parent} will build a record in the
+@code{catalog_category2category} table linking the category to its parent, 
+@xref{catalog_category2category_<name>,,@code{catalog_category2category_<name>}}.
+
+@cindex Link XML element
+@cindex XML element : Link
+@item Link
+Describes a record of the @code{catalog_entry2category} table, @xref{catalog_entry2category_<name>,,@code{catalog_entry2category_<name>}}.
+
+@cindex Record XML element
+@cindex XML element : Record
+@item Record
+Describes a record of the table named by the @strong{table} attribute.
+
+@cindex Symlink XML element
+@cindex XML element : Symlink
+@item Symlink
+Describes a record of the @code{catalog_category2category} table, @xref{catalog_category2category_<name>,,@code{catalog_category2category_<name>}}. The
+info field of the record is automaticaly set to @strong{symbolic}.
+
+
+@cindex Sync XML element
+@cindex XML element : Sync
+@item Sync
+When this element is seen during the parsing of the file, administrative
+information is recomputed for the catalog. This should only occur once,
+at the end of the file.
+
+@end table
+
+@node dmoz.org,  , XML structure, External representation
+@section dmoz.org
+
+@cindex dmoz.org
+
+The site @uref{http://www.dmoz.org/,} provides a dump of their catalog data.
+A conversion routine between their XML format and the Catalog XML format
+is provided (convert_dmoz). The @strong{Catalog} class was derived to 
+implement specific features and may be accessed using the @strong{dmoz}
+cgi-bin script instead of the @strong{Catalog} cgi-bin script.
+
+We have loaded a version of dmoz.org that contains approximately 400 000
+records and around 65 000 categories on a Pentium 350. It leads to a
+400Mb MySQL database and the response time when navigating the
+categories is excellent.
+
+@node Template files introduction, Catalog template files, External representation, Top
 @chapter Template files introduction
 
 @cindex template files 
@@ -3588,6 +3888,7 @@ on the action associated to the template.
 * Database table tags::         database table tags
 * Record list part::            Record list part
 * Multipage results template::  Multipage results template
+* Actions that takes a long time::  Actions that takes a long time
 @end menu
 
 @node Templates switch table, Fixed tags, Template files introduction, Template files introduction
@@ -3837,7 +4138,7 @@ template, @xref{Database table tags, ,@code{Database table tags}}.
 @end table
 
 
-@node Multipage results template,  , Record list part, Template files introduction
+@node Multipage results template, Actions that takes a long time, Record list part, Template files introduction
 @section Multipage results template
 
 All the cgi-bin that want to display their result using more than one HTML
@@ -3880,6 +4181,18 @@ output above.
 List of hidden fields necessary to perform the search. Must
 be included in each @code{form}.
 
+@node Actions that takes a long time,  , Multipage results template, Template files introduction
+@section Actions that takes a long time
+
+Some cgi-bin actions may take a very long time, such as catalog loading or
+dumping. When an action is likely to take a long time, the cgi-bin emits
+white space characters from time to time to provide a user feedback. When
+the action begins a blank page is shown to the user and the status bar of
+the navigator shows that some characters are received. 
+
+This feedback serves two purposes : it shows that the action is doing something
+and keeps the connection alive so that the HTTP server does not timeout.
+
 @node Catalog template files, SQL template files, Template files introduction, Top
 @chapter Catalog template files
 
@@ -3890,17 +4203,19 @@ be included in each @code{form}.
 * cedit.html::                  cedit.html
 * cbrowse_root.html::           cbrowse_root.html
 * cbrowse.html::                cbrowse.html
-* csearch.html::                
-* cdate_default.html::          
+* csearch.html::                csearch.html
+* cdate_default.html::          cdate_default.html
 * cdestroy.html::               cdestroy.html
 * centryremove_all.html::       centryremove_all.html
-* catalog_theme_insert.html::   
-* catalog_theme_edit.html::     
-* catalog_alpha_insert.html::   
-* catalog_alpha_edit.html::     
-* catalog_date_insert.html::    
-* catalog_date_edit.html::      
-* cdump.html::                  
+* catalog_theme_insert.html::   catalog_theme_insert.html
+* catalog_theme_edit.html::     catalog_theme_edit.html
+* catalog_alpha_insert.html::   catalog_alpha_insert.html
+* catalog_alpha_edit.html::     catalog_alpha_edit.html
+* catalog_date_insert.html::    catalog_date_insert.html
+* catalog_date_edit.html::      catalog_date_edit.html
+* cdump.html::                  cdump.html
+* cimport.html::                cimport.html
+* cexport.html::                cexport.html
 @end menu
 
 @node ccontrol_panel.html, calpha_root.html, Catalog template files, Catalog template files
@@ -3916,6 +4231,9 @@ Here is an example template:
 
 @example
 <title>Catalog control panel</title>
+
+<center><h3>Catalog control panel</h3></center>
+
 <center><h3><font color=red>_COMMENT_</font></h3></center>
 <table border=1>
 <tr><td colspan=2 align=middle><b>Configuration files</b></td></tr>
@@ -3931,9 +4249,14 @@ Here is an example template:
 <tr>
  <td><b><a href=_SCRIPT_?context=ccatalog_edit&name=_NAME_>_NAME_</a></b></td>
  <td><a href=_SCRIPT_?context=cbrowse&name=_NAME__ID_>browse</a></td>
- <td><a href=_SCRIPT_?context=cedit&name=_NAME__ID_>edit</a></td>
  <td><a href=_SCRIPT_?context=_COUNT_&name=_NAME_>count</a></td>
  <td><a href=_SCRIPT_?context=cdestroy&name=_NAME_>destroy</a></td>
+ <!-- start theme -->
+ <td><a href=_SCRIPT_?context=cedit&name=_NAME__ID_>edit</a></td>
+ <td><a href=_SCRIPT_?context=cdump&name=_NAME_>dump</a></td>
+ <td><a href=_SCRIPT_?context=cimport&name=_NAME_>load</a></td>
+ <td><a href=_SCRIPT_?context=cexport&name=_NAME_>unload</a></td>
+ <!-- end theme -->
 </tr>
 <!-- end catalogs -->
 </table>
@@ -3944,14 +4267,34 @@ Create _NAVIGATION_ catalog on table _TABLES_
 <input type=submit value='Create it!'>
 </form>
 <p>
-<a href=_SCRIPT_?context=cdemo>Create a demo table (urldemo)</a>
+<table><tr><td>
+<a href=_SCRIPT_?context=cimport>Load from file</a><br>
+<a href=_SCRIPT_/>Simplified browsing</a><br>
+<a href=_SCRIPT_?context=ccontrol_panel>Redisplay control panel</a><br>
+<a href=_SCRIPT_?context=cdemo>Create a demo table (urldemo)</a><br>
+</td><td>
+<a href=_HTMLPATH_/catalog_toc.html><img src=_HTMLPATH_/images/help.gif alt=Help border=0 align=middle></a>
+</td></tr></table>
+<pre></b><i>
 @end example
 
 @table @samp
 
 @item Parts
-The @strong{catalogs} part is repeated for each existing catalog in 
+
+@table @samp
+
+@cindex catalogs part
+@item catalogs
+This part is repeated for each existing catalog in 
 the current database.
+
+@cindex theme part
+@item theme
+This part @strong{must} be included in the @code{catalogs} part. It is
+only included if the catalog is a theme catalog.
+
+@end table
 
 @item Tags
 
@@ -4990,7 +5333,7 @@ All the automaticaly generated tags for the database table are
 available, provided that @code{_DEFAULTROW_} was not found in the
 template, @xref{Database table tags, ,@code{Database table tags}}.
 The table used is @strong{catalog}, for a list of the fields
-available in this table, @xref{catalog,,catalog}.
+available in this table, @xref{catalog,,@code{catalog}}.
 
 @end table
 
@@ -5044,7 +5387,7 @@ All the automaticaly generated tags for the database table are
 available, provided that @code{_DEFAULTROW_} was not found in the
 template, @xref{Database table tags, ,@code{Database table tags}}.
 The table used is @strong{catalog}, for a list of the fields
-available in this table, @xref{catalog,,catalog}.
+available in this table, @xref{catalog,,@code{catalog}}.
 
 @end table
 
@@ -5105,7 +5448,7 @@ All the automaticaly generated tags for the database table are
 available, provided that @code{_DEFAULTROW_} was not found in the
 template, @xref{Database table tags, ,@code{Database table tags}}.
 The table used is @strong{catalog}, for a list of the fields
-available in this table, @xref{catalog,,catalog}.
+available in this table, @xref{catalog,,@code{catalog}}.
 
 @end table
 
@@ -5159,7 +5502,7 @@ All the automaticaly generated tags for the database table are
 available, provided that @code{_DEFAULTROW_} was not found in the
 template, @xref{Database table tags, ,@code{Database table tags}}.
 The table used is @strong{catalog}, for a list of the fields
-available in this table, @xref{catalog,,catalog}.
+available in this table, @xref{catalog,,@code{catalog}}.
 
 @end table
 
@@ -5220,7 +5563,7 @@ All the automaticaly generated tags for the database table are
 available, provided that @code{_DEFAULTROW_} was not found in the
 template, @xref{Database table tags, ,@code{Database table tags}}.
 The table used is @strong{catalog}, for a list of the fields
-available in this table, @xref{catalog,,catalog}.
+available in this table, @xref{catalog,,@code{catalog}}.
 
 @end table
 
@@ -5274,13 +5617,13 @@ All the automaticaly generated tags for the database table are
 available, provided that @code{_DEFAULTROW_} was not found in the
 template, @xref{Database table tags, ,@code{Database table tags}}.
 The table used is @strong{catalog}, for a list of the fields
-available in this table, @xref{catalog,,catalog}.
+available in this table, @xref{catalog,,@code{catalog}}.
 
 @end table
 
 @end table
 
-@node cdump.html,  , catalog_date_edit.html, Catalog template files
+@node cdump.html, cimport.html, catalog_date_edit.html, Catalog template files
 @section cdump.html
 
 Ask for confirmation before dumping the content of a thematic catalog
@@ -5331,6 +5674,79 @@ Full path name of the directory where the catalog will be dumped.
 HTML base location used to navigate the dumped catalog. If _PATH_ is
 something like /home/http/htdocs/directory, the location is likely to be
 /directory.
+
+@end table
+
+@end table
+
+@node cimport.html, cexport.html, cdump.html, Catalog template files
+@section cimport.html
+
+Query parameters for loading a thematic catalog from a file.
+
+@cindex Thematic catalog load template
+@cindex Catalog load (thematic)
+@cindex cimport.html
+
+Here is an example template:
+
+@example
+<title>Load a thematic catalog</title>
+<form action=_SCRIPT_ method=POST>
+<input type=hidden name=context value=cimport_confirm>
+<table>
+<tr><td><b>Catalog name</b></td><td><input type=text name=name value=_NAME_></td></tr>
+<tr><td><b>File path</b></td><td><input type=text name=file></td></tr>
+</table>
+<input type=submit value='Load it!'>
+</form>
+@end example
+
+@table @samp
+
+@item Tags
+@table @samp
+
+@cindex _NAME_
+@item _NAME_
+Name of the catalog.
+
+@end table
+
+@end table
+
+@node cexport.html,  , cimport.html, Catalog template files
+@section cexport.html
+
+Query parameters for unloading a thematic catalog to a file.
+
+@cindex Thematic catalog unload template
+@cindex Catalog unload (thematic)
+@cindex cexport.html
+
+Here is an example template:
+
+@example
+<title>Unload a thematic catalog</title>
+<form action=_SCRIPT_ method=POST>
+<input type=hidden name=context value=cexport_confirm>
+<input type=hidden name=name value=_NAME_>
+<table>
+<tr><td><b>Catalog name</b></td><td>_NAME_</td></tr>
+<tr><td><b>File path</b></td><td><input type=text name=file></td></tr>
+</table>
+<input type=submit value='Unload it!'>
+</form>
+@end example
+
+@table @samp
+
+@item Tags
+@table @samp
+
+@cindex _NAME_
+@item _NAME_
+Name of the catalog.
 
 @end table
 
@@ -5915,7 +6331,7 @@ when navigator caches are used.
 * Database table parameters::   Database table parameters
 * Primary parameter::           Primary parameter
 * Recursive CGI call::          Recursive CGI call
-* CGI called with PATH_INFO::   
+* CGI called with PATH_INFO::   CGI called with PATH_INFO
 * Multipage results parameters::  Multipage results parameters
 @end menu
 
@@ -6158,13 +6574,13 @@ and the functionality provided.
 * Reset count on theme catalog (category_count)::  Reset count on theme catalog (category_count)
 * Build a new catalog (cbuild)::  Build a new catalog (cbuild)
 * Modify catalog properties (ccatalog_edit)::  Modify catalog properties (ccatalog_edit)
-* Browse alphabetical catalog root (calpha)::  
-* Browse alphabetical catalog (calpha)::  
+* Browse alphabetical catalog root (calpha)::  Browse alphabetical catalog root (calpha)
+* Browse alphabetical catalog (calpha)::  Browse alphabetical catalog (calpha)
 * Browse theme catalog root (cbrowse_root)::  Browse theme catalog root (cbrowse_root)
 * Browse theme catalog (cbrowse)::  Browse theme catalog (cbrowse)
-* Intuitive navigation (pathcontext)::  
-* Catalog search (csearch)::    
-* Browse chronological catalog (cdate)::  
+* Intuitive navigation (pathcontext)::  Intuitive navigation (pathcontext)
+* Catalog search (csearch)::    Catalog search (csearch)
+* Browse chronological catalog (cdate)::  Browse chronological catalog root (cdate)
 * Edit panel for a category node (cedit)::  Edit panel for a category node (cedit)
 * Remove a category (categoryremove)::  Remove a category (categoryremove)
 * Insert a category (categoryinsert)::  Insert a category (categoryinsert)
@@ -6174,8 +6590,12 @@ and the functionality provided.
 * Unlink a catalog entry (centryremove)::  Unlink a catalog entry (centryremove)
 * Ask to remove a catalog entry (centryremove_all)::  Ask to remove a catalog entry (centryremove_all)
 * Remove a catalog entry (centryremove_all_confirm)::  Remove a catalog entry (centryremove_all_confirm)
-* Ask for confirmation before dump (cdump)::  
-* Dump a thematic catalog (cdump_confirm)::  
+* Ask for confirmation before dump (cdump)::  Ask for confirmation before dump (cdump)
+* Dump a thematic catalog (cdump_confirm)::  Dump a thematic catalog (cdump_confirm)
+* Query parameters for load (cimport)::  Query parameters for load (cimport)
+* Load a thematic catalog from file (cimport_confirm)::  Load a thematic catalog from file (cimport_confirm)
+* Query parameters for unload (cexport)::  Query parameters for unload (cexport)
+* Unload a thematic catalog to file (cexport_confirm)::  Unload a thematic catalog to file (cexport_confirm)
 @end menu
 
 
@@ -6883,14 +7303,14 @@ List of actions that modify the displayed category:
 @item @image{images/new,,}
 Create a new record in the table associated with the catalog and link it
 to the current category, 
-@xref{Create and link a catalog entry (centryinsert),,Create and link a catalog entry (centryinsert)}.
+@xref{Create and link a catalog entry (centryinsert),,@code{Create and link a catalog entry (centryinsert)}}.
 
 @item @image{images/link,,}
 Display a search form that will allow you to choose a record in the table 
 associated with the catalog and link this record to the current category.
 In short, add a link to an existing record in this category. This effectively
 allows you to include a given record in many categories of the category tree,
-@xref{Link a catalog entry (centryselect),,Link a catalog entry (centryselect)}.
+@xref{Link a catalog entry (centryselect),,@code{Link a catalog entry (centryselect)}}.
 
 @item @image{images/open,,}
 Create a new sub category, @xref{Insert a category (categoryinsert), ,@code{Insert a category (categoryinsert)}}.
@@ -6929,7 +7349,7 @@ catalog.
 Remove the record and all links in all categories, @xref{Ask to remove a catalog entry (centryremove_all), ,@code{Ask to remove a catalog entry (centryremove_all)}}.
 
 @item @image{images/edit,,}
-Edit the record, @xref{Record edit form (edit),,Record edit form (edit)}. When
+Edit the record, @xref{Record edit form (edit),,@code{Record edit form (edit)}}. When
 the record is updated the current category is displayed.
 
 @end table
@@ -7354,7 +7774,7 @@ Unique name of the catalog.
 
 @end table
 
-@node Dump a thematic catalog (cdump_confirm),  , Ask for confirmation before dump (cdump), Catalog CGI
+@node Dump a thematic catalog (cdump_confirm), Query parameters for load (cimport), Ask for confirmation before dump (cdump), Catalog CGI
 @section Dump a thematic catalog (cdump_confirm)
 
 @cindex Dump a thematic catalog
@@ -7394,6 +7814,133 @@ Full path name of an existing directory. Saved in the @strong{dump} field of the
 @item location (mandatory)
 The HTML location used as base for links in the dumped pages. Saved in the @strong{dumplocation} field of the
 @strong{catalog} table.
+@end table
+
+@end table
+
+@node Query parameters for load (cimport), Load a thematic catalog from file (cimport_confirm), Dump a thematic catalog (cdump_confirm), Catalog CGI
+@section Query parameters for load (cimport)
+
+@cindex Load a thematic catalog
+@cindex Catalog, load a thematic
+@cindex cimport
+
+@table @samp
+
+@item Description
+Output a form so that user can specify the name of the thematic catalog to
+load (@code{name} parameter) and the file containing an XML representation
+of the catalog (@code{file} parameter).
+
+@item Template files
+@xref{cimport.html, ,@code{cimport.html}}.
+
+@item Parameters
+
+@cindex parameter, context
+@cindex parameter, name
+
+@table @samp
+@item context (mandatory, @strong{cimport})
+@item name (optional)
+Unique name of the catalog.
+@end table
+
+@end table
+
+@node Load a thematic catalog from file (cimport_confirm), Query parameters for unload (cexport), Query parameters for load (cimport), Catalog CGI
+@section Load a thematic catalog from file (cimport_confirm)
+
+@cindex Load a thematic catalog
+@cindex Catalog, load a thematic
+@cindex cimport_confirm
+
+@table @samp
+
+@item Description
+Build or rebuild a catalog from the external XML representation found in
+the file specified by the @code{file} parameter, @xref{External representation, ,@code{External representation}}. 
+
+@item Template files
+@xref{ccontrol_panel.html, ,@code{ccontrol_panel.html}}.
+
+@item Parameters
+
+@cindex parameter, context
+@cindex parameter, name
+@cindex parameter, file
+
+@table @samp
+@item context (mandatory, @strong{cimport})
+@item name (mandatory)
+Unique name of the catalog.
+@item file (mandatory)
+Path name of the file containing the external representation, 
+@xref{External representation, ,@code{External representation}}.
+@end table
+
+@end table
+
+@node Query parameters for unload (cexport), Unload a thematic catalog to file (cexport_confirm), Load a thematic catalog from file (cimport_confirm), Catalog CGI
+@section Query parameters for unload (cexport)
+
+@cindex Unload a thematic catalog
+@cindex Catalog, unload a thematic
+@cindex cexport
+
+@table @samp
+
+@item Description
+Output a form so that user can specify the name of the thematic catalog to
+unload (@code{name} parameter) and the file that will containi an XML
+representation of the catalog (@code{file} parameter).
+
+@item Template files
+@xref{cexport.html, ,@code{cexport.html}}.
+
+@item Parameters
+
+@cindex parameter, context
+@cindex parameter, name
+
+@table @samp
+@item context (mandatory, @strong{cexport})
+@item name (optional)
+Unique name of the catalog.
+@end table
+
+@end table
+
+@node Unload a thematic catalog to file (cexport_confirm),  , Query parameters for unload (cexport), Catalog CGI
+@section Unload a thematic catalog to file (cexport_confirm)
+
+@cindex Unload a thematic catalog
+@cindex Catalog, unload a thematic
+@cindex cexport_confirm
+
+@table @samp
+
+@item Description
+Build an external XML representation for the catalog specified by the
+@code{name} parameter in
+the file specified by the @code{file} parameter, @xref{External representation, ,@code{External representation}}. 
+
+@item Template files
+@xref{ccontrol_panel.html, ,@code{ccontrol_panel.html}}.
+
+@item Parameters
+
+@cindex parameter, context
+@cindex parameter, name
+@cindex parameter, file
+
+@table @samp
+@item context (mandatory, @strong{cexport})
+@item name (mandatory)
+Unique name of the catalog.
+@item file (mandatory)
+Path name of the file containing the external representation, 
+@xref{External representation, ,@code{External representation}}.
 @end table
 
 @end table
@@ -8345,6 +8892,22 @@ Break the link between a record of a catalogued table and a category
 of a given catalog. This implies to remove a
 record from the @strong{catalog_entry2category_<name>} table.
 
+@cindex XML
+@item XML
+The Extensible Markup Language (XML) 
+is a data format for structured document interchange on the Web.
+
+@cindex XML attribute
+@cindex attribute XML
+@item XML attribute
+An XML attribute a key/value pair found in the opening tag of an element.
+For instance <tag attr=val> contains the @strong{attr=val} attribute.
+
+@cindex XML element
+@cindex element XML
+@item XML element
+An XML element is a <tag> bla bla </tag> pair. Elements may be nested.
+
 @end table
 
 @node Environment variables, Troubleshooting, Glossary, Top
@@ -8372,6 +8935,14 @@ first directory that contains the template file wins,
 @chapter Troubleshooting
 
 @table @samp
+
+@cindex Blank page
+@cindex Very long actions
+@cindex Actions that take a long time
+@item Why do I have a blank page when loading/unloading a catalog ?
+
+This is because the action takes a long time. Incoming characters show
+that the action is running, @xref{Actions that takes a long time, ,@code{Actions that takes a long time}}.
 
 @cindex /tmp, garbage in
 @item My /tmp is filled with files created by @strong{Catalog}
@@ -8407,31 +8978,6 @@ numerical key named rowid, @xref{Catalog management guide, , @code{Catalog manag
 If the associated error message in the logs is 
 cannot execute select <table>.rowid from <table>, see the corresponding 
 entry in this chapter.
-
-@item Got a 'Document contains no data' when trying to setup the Catalog
-
-If the HTTP logs contain a message that looks like the following:
-
-@example
-Catalog: DBD::mysql::st execute failed: parse error near 'not null,
-created datetime not null,
-modified timestamp not null,
-@end example
-
-This is a problem due to the fact that MySQL has changed
-the order of 'not null auto_increment' to 'auto_increment not null'
-somewhere between 3.21 and 3.22. To fix this you can set the
-environment variable MYSQL_OLD=1. If you are running Apache on RedHat
-it means doing the following:
-
-@example
-edit /etc/httpd/httpd.conf to add
-PassEnv MYSQL_OLD
-# export MYSQL_OLD=1 
-# /etc/rc.d/init.d/httpd restart
-@end example
-
-Hopefully this problem will disappear as more people use the 3.22 MySQL version.
 
 @item Where are the error messages ?
 If you're running @strong{Apache} they are in the @strong{error_log} file.
@@ -8469,7 +9015,7 @@ the reason of the error.
 
 The @code{MySQL} server is probably not running. Check that at least one @strong{mysqld}
 process is running. There may be more on systems that show threads on the
-ps output.
+ps output. 
 
 @image{images/cannotconnect,10cm,}
 

@@ -1,32 +1,9 @@
-$Id: INSTALL,v 1.15 1999/03/10 19:22:40 ecila40 Exp $
+$Id: INSTALL,v 1.23 1999/04/19 13:20:50 ecila40 Exp $
 
 The Catalog home page is http://www.senga.org/
 
-Requires: 
----------
-          At the end of this file you will find scripts that will help
-          you install these components on specific plateforms. The 
-          distributions packages of all these specific versions can be 
-          found on the senga site at http://www.senga.org/download.html.
-
-          To build the software you will need:
-
-          perl5.005 or higher (http://www.perl.org/)
-          mysql-3.22.8-beta or higher (http://www.tcx.se/)
-          DBI-1.02 or higher (http://www.perl.org/, CPAN section)
-          MD5-1.7 or higher (http://www.perl.org/, CPAN section)
-          CGI-2.46 or higher (http://www.perl.org/, CPAN section)
-          Msql-Mysql-modules-1.2010 or higher (http://www.perl.org/, CPAN section)
-          An HTTP server (Apache for instance) running on your local machine.
-
-          To build the documentation (optional) you will need:
-
-          HTML format : texi2html-1.51a or any version handling @image
-          PS format : texi2dvi, TeX, dvips
-          Emacs info format : makeinfo-3.12 or higher
-
-Quick start:
-------------
+Quick start (assuming you have installed MySQL and Perl):
+---------------------------------------------------------
           #
           # Extract the distribution
           #
@@ -35,16 +12,23 @@ Quick start:
           # Go to the distribution directory
           #
           cd Catalog-*
+	  #
+	  # Install dependent modules (assuming you've installed
+	  # the CPAN module).
+	  #
+	  MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
+	  DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
+	    perl -MCPAN -Ilib -e 'force install Bundle::Catalog'
           #
           # replace /home/httpd/cgi-bin by your cgi-bin directory
           # replace /home/httpd/html by the directory where you put your
           #     HTML pages.
           #
 	  mkdir /home/httpd/html/Catalog
-          INFODIR='' HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
-	     CONFIG_DIR='' \
+          HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
              CGIDIR=/home/httpd/cgi-bin CGIPATH=/cgi-bin \
-	     USERID=nobody AUTH='root:passpass' \
+	     USERID=nobody \
+	     MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
              perl Makefile.PL
           #
           # Install the software
@@ -60,6 +44,50 @@ Quick start:
           # to get the Catalog Control Panel.
           #
           netscape http://www.mymachine.org/cgi-bin/Catalog?context=ccontrol_panel
+
+Requires: 
+---------
+          At the end of this file you will find scripts that will help
+          you install these components on specific plateforms. The 
+          distributions packages of all these specific versions can be 
+          found on the senga site at http://www.senga.org/download.html.
+
+          To build the software you will need:
+
+          perl5.005_02 or higher (http://www.perl.org/)
+          mysql-3.22.19a or higher (http://www.tcx.se/)
+
+	  Catalog depends on other Perl modules. You can either install them
+	  yourself or use the Bundle facility as shown in the Quick start
+	  section. Here is a complete list of the modules needed to run
+	  Catalog with minimal version number. All of them may be found on 
+	  CPAN (http://www.perl.com/CPAN/).
+
+	  DBI 1.02 - Database independent interface for Perl
+
+	  DBD::mysql 2.0210 - mysql drivers for the Perl Database Interface (DBI)
+
+	  MD5 1.7 - Perl interface to the MD5 Message-Digest Algorithm
+
+	  CGI 2.46 - Simple Common Gateway Interface Class
+
+	  XML::Parser 2.22 - parsing XML documents
+
+	  XML::DOM 1.19 - building DOM Level 1 compliant document structures
+
+	  Unicode::String 1.20 - String of Unicode characters
+
+	  Unicode::Map8 0.05 - Mapping table between 8-bit chars and Unicode
+
+          An HTTP server (Apache for instance) running on your local machine.
+	  If you want really good performances you must build Apache with
+	  mod_perl. See the INSTALL.apache file for instructions.
+
+          To build the documentation (optional) you will need:
+
+          HTML format : texi2html-1.51a or any version handling @image
+          PS format : texi2dvi, TeX, dvips
+          Emacs info format : makeinfo-3.12 or higher
 
 Configuration:
 --------------
@@ -100,30 +128,53 @@ Configuration:
               USERID The user id of the HTTP daemon. The configuration files
                      must have the same owner because the HTML interface
                      must be able to modify them.
-              AUTH   The user and password to connect to the database, separated
-                     by a colon. For instance 'root:passpass' is a valid value.
-                     An attempt to connect to the database will validate these
-                     values. If a Catalog has already been installed and a 
-                     configuration file exists in the CONFIG_DIR directory, there
-                     is no need to specify the user and password, the existing
-                     configuration file will not be modified.
+	      MYSQL_BASE name of the MySQL database that will be used.
+	      MYSQL_USER name of the user for authentification when connecting
+		     to the MySQL server (--user option).
+	      MYSQL_PASSWORD password of the user for authentification when
+		     connecting to the MySQL server (--password option).
+	      MYSQL_HOST host name of the machine where the MySQL server is
+		     located (--host option).
+              MYSQL_PORT TCP/IP port to use to connect to the server, if not
+		     the default (--port option).
+	      MYSQL_UNIX_PORT file name of the socket file to use when 
+	             connecting to a server on the local 
+	             machine (--socket option).
+	      DOC_HTML if set to 'yes' format documenation in HTML, if set to
+		     'no' do not format. If conversion utility is missing, skip
+		     formating anyway. Default is yes.
+	      DOC_PS if set to 'yes' format documenation in Postscript, if set 
+		     to 'no' do not format. If conversion utility is missing, 
+		     skip formating anyway. Default is no.
+	      DOC_INFO if set to 'yes' format documenation in Emacs info, if
+		     set to 'no' do not format. If conversion utility is 
+		     missing, skip formating anyway. Default is no.
 
-              If INFODIR is set to the empty string, the documentation is
-	      not formated to info format and not installed.
+	      Alternatively you can hand edit the conf/install.conf and
+	      conf/mysql.conf files. The mysql.conf file contains the values
+	      associated to the environment variables starting with MYSQL_
+	      and the install.conf file contains all the others.
 
-              HTMLDIR must be specified, otherwise images will be missing
-	         for the Catalog administration interface.
+	      When the Makefile.PL is executed, it reads the conf/install.conf
+	      and conf/mysql.conf files and re-use existing values as 
+	      defaults. An environment variable will override the corresponding
+	      value found in the files. If a value is specified using an
+	      environment variable, the interactive mode is disabled for
+	      this value. At completion the the conf/install.conf and 
+	      conf/mysql.conf files are updated with the new values.
 
-              CGIDIR must be specified, otherwise you won't be
-                 able to run Catalog at all.
+	      If the configuration contained in the conf/install.conf and 
+	      conf/mysql.conf files is correct and you simply want to
+	      execute Makefile.PL again (after a make clean, for instance)
+	      you can completely skip user interaction using the following
+
+			USE_DEFAULTS=1 perl Makefile.PL
+
+	  make 
+
+	  make test
 
           make install
-
-	  All the configuration environment variables are saved in the
-	  config.cache file and re-used when perl Makefile.PL is run. This
-	  allows you to run perl Makefile.PL more than once without the need
-	  to specify all the variables or to manually edit the file to change
-	  a specific variable.
 
 Plateform specific:
 -------------------
@@ -138,11 +189,12 @@ RedHat 5.2
 #
 # Run these as root user
 #
+#-------------------------------------------------------------------------
 #
 # Build perl (RedHat 5.2 is shipped with perl5.004_04 and we need perl5.005_02)
-# /mirror/pub/perl is a mirror of ftp.perl.org
+# Get file from http://www.perl.com/CPAN/src
 #
-tar -zxf /mirror/pub/perl/CPAN/src/perl5.005_02.tar.gz ; \
+tar -zxf perl5.005_02.tar.gz ; \
 	cd perl5.005_02 ; \
 	sh Configure -des ; \
 	make ; \
@@ -152,62 +204,75 @@ tar -zxf /mirror/pub/perl/CPAN/src/perl5.005_02.tar.gz ; \
 #
 perl -v
 #
-# Install MySQL, /mirror/pub/mysql is a mirror of ftp.tcx.se
+# Install CPAN module
+# Get file from http://www.perl.com/CPAN/modules/by-module/CPAN/
 #
-rpm -ivh /mirror/pub/mysql/Downloads/MySQL-3.22/MySQL-client-3.22.14b-gamma-1.i386.rpm
-rpm -ivh /mirror/pub/mysql/Downloads/MySQL-3.22/MySQL-3.22.14b-gamma-1.i386.rpm
+# You will be asked a lot of questions and can safely use the defaults.
 #
-# Set up permissions as suggested by the installation
+tar -zxvf CPAN-1.48.tar.gz ; \
+	cd CPAN-1.48 ; \
+	perl Makefile.PL ; \
+	make ; \
+	make install
+#-------------------------------------------------------------------------
+#
+# Install MySQL 
+#
+# First uninstall older release
+#
+rpm -e MySQL-devel
+rpm -e MySQL
+rpm -e MySQL-client
+#
+# Get files from ftp://ftp.tcx.se/pub/mysql/Downloads/MySQL-3.22/
+#
+rpm -ivh MySQL-client-3.22.19a-1.i386.rpm
+rpm -ivh MySQL-3.22.19a-1.i386.rpm
+#
+# Set up permissions as suggested by the installation.
 #
 /usr/bin/mysqladmin -u root password 'passpass'
 #
-# Finish MySQL installation, /mirror/pub/mysql is a mirror of ftp.tcx.se
+# Finish MySQL installation
 #
-rpm -ivh /mirror/pub/mysql/Downloads/MySQL-3.22/MySQL-devel-3.22.14b-gamma-1.i386.rpm
+rpm -ivh MySQL-devel-3.22.19a-1.i386.rpm
+#-------------------------------------------------------------------------
 #
-# Build DBI, /mirror/pub/perl is a 
-# mirror of ftp.perl.org
+# Extract Catalog distribution
 #
-cd /usr/local/src; \
-	tar -zxvf /mirror/pub/perl/CPAN/modules/by-category/07_Database_Interfaces/DBI/DBI-1.06.tar.gz ; \ 
-	cd DBI-1.06 ; \
-	perl Makefile.PL ; \
-	make ; \
-	make install
-#
-# Build MD5, /mirror/pub/perl is a 
-# mirror of ftp.perl.org
-#
-cd /usr/local/src; \
-	tar -zxvf /mirror/pub/perl/CPAN/modules/by-module/MD5/MD5-1.7.tar.gz ; \ 
-	cd MD5-1.7 ; \
-	perl Makefile.PL ; \
-	make ; \
-	make install
-#
-# Install Msql-Mysql-modules-1.2017, /mirror/pub/perl is a 
-# mirror of ftp.perl.org
-#
-cd /usr/local/src; \
-        tar zxvf \
-        /mirror/pub/perl/CPAN/modules/by-category/07_Database_Interfaces/DBD/Msql-Mysql-modules-1.2017.tar.gz; \
-        cd Msql-Mysql-modules-1.2017; \
-        MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 perl Makefile.PL; \
-        make; \
-        make install;
-#
-# Build Catalog
-#
-gtar -zxvf ../src/Catalog-*.gz
+gtar -zxvf Catalog-*.gz
 cd Catalog-*
+#
+# Install Perl modules needed by Catalog
+# (change root/passpass to your real user/password)
+#
+MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
+DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
+ perl -MCPAN -Ilib -e 'force install Bundle::Catalog'
+#
+# Create HTML repository 
+#
 mkdir /home/httpd/html/Catalog
-INFODIR='' HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
- CONFIG_DIR='' \
+#
+# Configure catalog (change root/passpass to your real user/password)
+#
+HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
  CGIDIR=/home/httpd/cgi-bin CGIPATH=/cgi-bin \
  USERID=nobody \
- AUTH='root:passpass' perl Makefile.PL
+ MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
+ USE_DEFAULTS=1 \
+ perl Makefile.PL
+#
+# Build
+#
 make 
+#
+# Test
+#
 make test
+#
+# Install
+#
 make install
 
 Solaris 2.6
@@ -216,85 +281,89 @@ Solaris 2.6
 # These instructions assume that you're a normal user on a Solaris 2.6
 # system, without root privileges. The instructions do not differ much
 # if you have root access.
+# gtar stands for GNU tar (found on ftp://prep.ai.mit.edu/pub/gnu)
 #
+# Add our local bin directory in the path
 #
-# You will need a make, C and C++ compiler for MySQL and Perl. Find those
-# on www.sunfreeware.com. 
+export PATH=$HOME/local/bin:$PATH
+mkdir $HOME/local
+#-------------------------------------------------------------------------
 #
-mkdir src
-# 
-# Download the necessary packages from your preferred ftp site or from 
-# http://www.senga.org/download.html
+# Build perl 
+# Get file from http://www.perl.com/CPAN/src
 #
-mkdir ../ports ; cd ../ports
+gtar -zxf perl5.005_02.tar.gz ; \
+	cd perl5.005_02 ; \
+	prefix=$HOME/local ; \
+	LD_LIBRARY_PATH=:`pwd`:$LD_LIBRARY_PATH \
+	sh Configure -des -Dprefix=$prefix -Dlocincpth=$prefix/include -Dloclibpth=$prefix/lib ; \
+	make ; \
+	make install
 #
-# Build perl
+# Check that we are using the just compiled perl
 #
-gtar -zxf ../src/perl5.005_02.tar.gz 
-cd perl5.005_02
-prefix=$HOME/myperl
-LD_LIBRARY_PATH=:`pwd`:$LD_LIBRARY_PATH \
- sh Configure -des -Dprefix=$prefix -Dlocincpth=$prefix/include -Dloclibpth=$prefix/lib ; \
-        make ; \
-        make install
-export PATH=$prefix/bin:$PATH
-cd ..
+perl -v
 #
-# Build MySQL (beware, you will need egcs !)
+# Build texi2html
+# Get file from http://www.senga.org/download.html
 #
-gtar -zxvf ../src/mysql-3.22.16a-gamma.tar.gz
-cd mysql-3.22.16a-gamma
-prefix=$HOME/mysql
-./configure --prefix=$prefix
-make all install
-./scripts/mysql_install_db
-export PATH=$prefix/bin:$PATH
+cp texi2html $HOME/local/bin
 #
-# kill -9 the safe_mysql
+# Edit $HOME/local/bin/texi2html and change
+# the first line to $HOME/local/bin/perl
 #
-kill -9 `cat $HOME/mysql/var/*.pid`
-$HOME/mysql/libexec/mysqld &
+chmod +x $HOME/local/bin/texi2html
+#-------------------------------------------------------------------------
 #
-# Allow user to connect to the base 
+# Install CPAN module
+# Get file from http://www.perl.com/CPAN/modules/by-module/CPAN/
 #
-mysql mysql <<EOF
-delete from db ;
-delete from host;
-delete from user; 
-delete from func;
-
+# You will be asked a lot of questions and can safely use the defaults.
 #
-# Dumping data for table 'db'
+gtar -zxvf CPAN-1.48.tar.gz ; \
+	cd CPAN-1.48 ; \
+	perl Makefile.PL ; \
+	make ; \
+	make install
+#-------------------------------------------------------------------------
 #
-
-INSERT INTO db VALUES ('%','$LOGNAME','','Y','Y','Y','Y','Y','Y');
-
+# Install MySQL 
 #
-# Dumping data for table 'host'
+# Get files from ftp://ftp.tcx.se/pub/mysql/Downloads/MySQL-3.22
 #
-
-INSERT INTO host VALUES ('localhost','%','Y','Y','Y','Y','Y','Y');
-
+cd $HOME/local ; \
+	gtar -zxf mysql-3.22.19a-sun-solaris2.6-sparc.tar.gz ; \
+	ln -s mysql-3.22.19-sun-solaris2.6-sparc mysql ; \
+	cd mysql ; \
+	scripts/mysql_install_db ; \
+	bin/mysqld --basedir=. --datadir=data & \
+	./bin/mysqladmin -u root password 'passpass'
 #
-# Dumping data for table 'user'
+# Add mysql bin directory to your path
 #
-
-INSERT INTO user VALUES ('localhost','$LOGNAME',PASSWORD('passpass'),'Y','Y','Y','Y','Y','Y','Y','Y','Y','Y');
-EOF
-kill -15 `cat $HOME/mysql/var/*.pid`
-$HOME/mysql/libexec/mysqld &
-cd ..
+export PATH=$HOME/local/mysql/bin:$PATH
+#
+# Specify the location of the MySQL installation to
+# the MySQL server.
+#
+(
+ echo "[mysqld]"
+ echo "basedir=$HOME/local/mysql"
+) > $HOME/.my.cnf
+#-------------------------------------------------------------------------
 #
 # Build Apache
 #
-gtar -zxvf ../src/apache_1.3.4.tar.gz
-cd apache_1.3.4
-prefix=$HOME/myapache
-./configure --prefix=$prefix
-make 
-make install
+# Get file from http://www.apache.org/dist/
 #
-# Edit $prefix/etc/httpd.conf and change the user and group
+gtar -zxvf apache_1.3.4.tar.gz ; \
+	cd apache_1.3.4 ; \
+	prefix=$HOME/local ; \
+	./configure --prefix=$prefix ; \
+	make ; \
+	make install
+#
+# Edit $prefix/conf/httpd.conf and change the user and group
 # 
 # User <your user id>
 # Group <your group name>
@@ -303,62 +372,51 @@ make install
 #
 # ServerName www.yourmachine.org
 #
-# Edit $prefix/etc/srm.conf and uncomment the ScriptAlias line
+# Edit $prefix/conf/srm.conf and uncomment the ScriptAlias line
 #
-# ScriptAlias /cgi-bin/ <apache directory>/share/cgi-bin/
+# ScriptAlias /cgi-bin/ $HOME/local/cgi-bin/
 #
 # Run the server, by default on the 8080 port 
 # (http://www.yourmachine.org:8080/)
 #
-$prefix/sbin/apachectl start
+$HOME/local/bin/apachectl start
+#-------------------------------------------------------------------------
 #
-# Build DBI
+# Extract Catalog distribution
 #
-gtar -zxvf ../src/DBI-1.06.tar.gz 
-cd DBI-1.06
-perl Makefile.PL
-make
-make install
-#
-# Build MD5
-#
-gtar -zxvf ../src/MD5-1.7.tar.gz 
-cd MD5-1.7
-perl Makefile.PL
-make
-make install
-#
-# Build Msql-Mysql-modules-1.2017
-#
-gtar -zxvf ../src/Msql-Mysql-modules-1.2017.tar.gz 
-cd Msql-Mysql-modules-1.2017
-MYSQL_HOME=$HOME/mysql IN_MYSQL_DISTRIBUTION=1 perl Makefile.PL
-make 
-make install
-#
-# Build texi2html
-#
-cp ../src/texi2html $HOME/myperl/bin
-#
-# Edit $HOME/myperl/bin/texi2html and change
-# the first line to $HOME/myperl/bin/perl
-#
-chmod +x $HOME/myperl/bin/texi2html
-#
-# Build Catalog
-# ATTENTION! The chown will fail because you're not root. This is
-# harmless if the HTTP deamon is running with your id.
-#
-gtar -zxvf ../src/Catalog-*.gz
+gtar -zxvf Catalog-*.gz
 cd Catalog-*
-mkdir $HOME/myapache/share/htdocs/Catalog
-INFODIR='' HTMLDIR=$HOME/myapache/share/htdocs/Catalog HTMLPATH=/Catalog \
- CONFIG_DIR='' \
- CGIDIR=$HOME/myapache/share/cgi-bin CGIPATH=/cgi-bin \
+#
+# Install Perl modules needed by Catalog
+# (change root/passpass to your real user/password)
+#
+MYSQL_HOME=$HOME/local/mysql IN_MYSQL_DISTRIBUTION=1 \
+DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
+ perl -MCPAN -Ilib -e 'force install Bundle::Catalog'
+#
+# Create HTML repository 
+#
+mkdir $HOME/htdocs/Catalog
+#
+# Configure catalog (change root/passpass to your real user/password)
+#
+HTMLDIR=$HOME/local/htdocs/Catalog HTMLPATH=/Catalog \
+ CGIDIR=$HOME/local/cgi-bin CGIPATH=/cgi-bin \
  USERID=$LOGNAME \
- AUTH="$LOGNAME:passpass" perl Makefile.PL
+ MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
+ USE_DEFAULTS=1 \
+ perl Makefile.PL
+#
+# Build
+#
 make 
+#
+# Test
+#
 make test
+#
+# Install
+#
 make install
 
 --------------------------------------
