@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/tools/mysql/schema.pm,v 1.1 1999/05/15 14:20:50 ecila40 Exp $
+# $Header: /cvsroot/Catalog/Catalog/lib/Catalog/tools/mysql/schema.pm,v 1.1 1999/05/15 14:20:50 ecila40 Exp $
 #
 #
 # Table schemas

@@ -1,5 +1,5 @@
 #
-# $Header: /usr/local/cvsroot/Catalog/t/02rdf.t,v 1.6 1999/05/31 18:33:08 loic Exp $
+# $Header: /cvsroot/Catalog/Catalog/t/02rdf.t,v 1.6 1999/05/31 18:33:08 loic Exp $
 #
 use strict;
 

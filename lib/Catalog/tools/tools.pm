@@ -17,7 +17,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/tools/tools.pm,v 1.18 1999/09/07 14:48:04 loic Exp $
+# $Header: /cvsroot/Catalog/Catalog/lib/Catalog/tools/tools.pm,v 1.21 2000/01/27 18:08:37 loic Exp $
 #
 # 
 package Catalog::tools::tools;
@@ -617,7 +617,7 @@ sub shell {
     dbg("$cmd\n", "normal") if(!$silent);
     my($pid);
     unless ($pid = fork) {
-	exec('ksh', '-c', $cmd) or error("no exec : $!");
+	exec('sh', '-c', $cmd) or error("no exec : $!");
     }
     waitpid($pid,0);
     if($? != 0) {

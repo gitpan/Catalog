@@ -17,268 +17,247 @@ $Config{'startperl'} -w
 print OUT <<'!NO!SUBS!';
 
 use strict;
-use vars qw($create $catid_max $record_max %path2catid $cgi);
+use vars qw($create $catid_max $record_max %path2catid %catid2path 
+	    %stats $verbose $today $exclude);
+use Carp;
+use POSIX qw(strftime);
+use Getopt::Long;
 use Catalog::tools::tools;
 use Catalog::tools::cgi;
 
-$create = <<'EOF';
- <Table>
-  <![CDATA[
-create table dmozrecords (
-  #
-  # Table management information 
-  #
-  rowid int auto_increment not null,
-  created datetime not null,
-  modified timestamp not null,
-
-  info enum ('active', 'inactive') default 'active',
-  url char(255),
-  title char(255),
-  description text,
-  priority tinyint,
-
-  unique dmozrecord1 (rowid)
-)
-  ]]>
- </Table>
-
- <Catalog>
-  <name>dmoz</name>
-  <tablename>dmozrecords</tablename>
-  <navigation>theme</navigation>
- </Catalog>
-EOF
-
-my($cgi) = exists($ENV{'REQUEST_METHOD'});
-
 sub main {
-    my($content, $structure, $to) = @ARGV;
+    my($what);
+    my($load);
 
-    if(!defined($content) ||
-       !defined($structure) ||
-       !defined($to) ||
-       ! -r $content || ! -r $structure) {
-	print STDERR "usage: $0 content.rdf structure.rdf dmoz.rdf\n";
+    GetOptions("verbose+" => \$verbose,
+	       "what=s" => \$what,
+	       "load=s" => \$load,
+	       "exclude=s" => \$exclude);
+
+    my($input) = @ARGV;
+
+    if(!defined($input) ||
+       ! -r $input) {
+	print STDERR "
+usage: $0 [-v] [-exclude pattern] -what {content|structure} {content.rdf[.gz]|structure.rdf[.gz]}
+       $0 [-v] -load all directory
+       $0 [-v] -load {category|entry2category|category2category|dmozrecords} file.txt
+";
 	return;
     }
 
     $| = 1;
 
-    open(TO, ">$to") or error("cannot open $to for writing : $!");
+    convert($what, $input) if($what);
+    load($load, $input) if($load);
 
-    print TO <<'EOF';
-<?xml version="1.0" encoding="ISO-8859-1" ?>
-<RDF xmlns:rdf="http://www.w3.org/TR/1999/REC-rdf-syntax-19990222#"
-     xmlns="http://www.ecila.fr/">
-EOF
+    stats();
+}
+
+sub load {
+    my($what, $input) = @_;
+    my($all) = $what eq 'all';
+    my($dir) = $input;
+
+    $input = "$dir/category.txt" if($all);
+    if($all || $what eq 'category') {
+	system("mysql -e \"delete from catalog_category_dmoz where rowid > 1;\" dmoz");
+	system("mysql -e \"load data infile '$input' into table catalog_category_dmoz;\" dmoz");
+	system("echo catalog_category_dmoz; mysql -e \"select count(*) from catalog_category_dmoz;\" dmoz");
+    } 
+
+    $input = "$dir/entry2category.txt" if($all);
+    if($all || $what eq 'entry2category') {
+	system("mysql -e \"delete from catalog_entry2category_dmoz;\" dmoz");
+	system("mysql -e \"load data infile '$input' into table catalog_entry2category_dmoz;\" dmoz");
+	system("echo catalog_entry2category_dmoz; mysql -e \"select count(*) from catalog_entry2category_dmoz;\" dmoz");
+    }
+
+    $input = "$dir/category2category.txt" if($all);
+    if($all || $what eq 'category2category') {
+	system("mysql -e \"delete from catalog_category2category_dmoz;\" dmoz");
+	system("mysql -e \"load data infile '$input' into table catalog_category2category_dmoz;\" dmoz");
+	system("echo catalog_category2category_dmoz; mysql -e \"select count(*) from catalog_category2category_dmoz;\" dmoz");
+    }
+
+    $input = "$dir/dmozrecords.txt" if($all);    
+    if($all || $what eq 'dmozrecords') {
+	system("mysql -e \"delete from dmozrecords;\" dmoz");
+	system("mysql -e \"load data infile '$input' into table dmozrecords;\" dmoz");
+	system("echo dmozrecords; mysql -e \"select count(*) from dmozrecords;\" dmoz");
+    }
+
+    system("mysql -e \"drop table if exists catalog_path_dmoz\" dmoz");
+}
+
+sub convert {
+    my($what, $input) = @_;
+
+    $today = strftime("%Y/%m/%d", localtime());
+
     my($count) = 0;
-    my($threshold) = 1000;
-    if($content) {
-	print TO $create;
-	$content = "gzip -dc '$content' |" if $content =~ /\.gz/;
-	open(FROM, "$content") or error("cannot open $content for reading : $!");
+    my($threshold) = 10000;
+    if($what eq 'content') {
+	$input = "gzip -dc '$input' |" if $input =~ /\.gz/;
+	open(FROM, "$input") or error("cannot open $input for reading : $!");
+	open(CATEGORY, ">category.txt") or error("cannot open category.txt for writing : $!");
+	open(ENTRY2CATEGORY, ">entry2category.txt") or error("cannot open entry2category.txt for writing : $!");
+	open(CATEGORY2CATEGORY, ">category2category.txt") or error("cannot open category2category.txt for writing : $!");
+	open(DMOZRECORDS, ">dmozrecords.txt") or error("cannot open dmozrecord.txt for writing : $!");
 	my @buffer;
 	my($accumulate);
 	while(<FROM>) {
 	    if(/^<Topic/) {
 		if($accumulate) {
-		    handle_content( join "", @buffer );
+		    handle_content(join("", @buffer));
 		    @buffer = ();
 		}
 		$accumulate = 1;
 	    }
-	    push @buffer, $_ if $accumulate;
-	    print " " if($cgi && ++$count % $threshold == 0);
+	    push(@buffer, $_) if $accumulate;
+	    print "." if(++$count % $threshold == 0);
 	}
 
-	handle_content( join "", @buffer );
-	close(FROM);
-	#
-	# Trigger computation of additional administrative data.
-	# This data may be needed to process the structure.
-	#
-	print TO " <Sync/>\n";
-    }
-    if($structure) {
-	$structure = "gzip -dc '$structure' |" if $structure =~ /\.gz/;
-	open(FROM, "$structure") or error("cannot open $structure for reading : $!");
-	my @buffer;
-	my($accumulate);
-	while(<FROM>) {
-	    if(/^<Topic/) {
-		if($accumulate) {
-		    handle_structure( join "", @buffer );
-		    @buffer = ();
-		}
-		$accumulate = 1;
-	    }
-	    push @buffer, $_ if $accumulate;
-	    print " " if($cgi && ++$count % $threshold == 0);
-	}
-
-	handle_structure( join "", @buffer );
+	handle_content(join("", @buffer));
+	close(CATEGORY);
+	close(ENTRY2CATEGORY);
+	close(CATEGORY2CATEGORY);
+	close(DMOZRECORDS);
 	close(FROM);
     }
-
-    print TO "\n</RDF>\n";
-    close(TO);
 }
 
 sub fixup {
     my($string, $default) = @_;
 
-    return $default if(!$string || $string =~ /^\s*$/so);
+    return $default if(!$string || $string =~ /^\s*$/s);
 
-    $string =~ s/[\000-\037\177]//go;
+    $string =~ s/[\000-\037\177]//gs;
+    $string =~ s/&amp;/&/gs;
+    $string =~ s/&lt;/</gs;
+    $string =~ s/&gt;/>/gs;
+    $string =~ s/&quot;/\"/gs;
     $string = Catalog::tools::cgi::myescapeHTML($string);
 
     return $string;
 }
 
-$catid_max = 5000000;
-$record_max = 1;
-%path2catid = ();
+sub loadquote {
+    my($string) = @_;
+    $string =~ y/\n\t/  /;
+    return $string;
+}
 
-sub handle_structure {
-    my($buffer) = @_;
-
-    my($catid) = $buffer =~ m|<catid>(\d+)</catid>|so;
-    return if(!defined($catid));
-
-    my(@editors) = ();
-    while($buffer =~ m|<editor r:resource=\"(.*?)\"/>|sgo) {
-	my($string) = $1;
-	next if(!$string || $string =~ /^\s*$/o);
-	push(@editors, fixup($string, ''));
-    }
-
-    my($editor);
-    foreach $editor (@editors) {
-	print TO " <Auth>\n";
-	print TO "  <login>$editor</login>\n";
-	print TO "  <category>$catid</category>\n";
-	print TO " </Auth>\n";
-    }
-    
-    my(@newsgroups) = ();
-    while($buffer =~ m|<newsGroup r:resource=\"(.*?)\"/>|sgo) {
-	my($string) = $1;
-	next if(!$string || $string =~ /^\s*$/o);
-	push(@newsgroups, fixup($string, ''));
-    }
-
-    my($newsgroup);
-    foreach $newsgroup (@newsgroups) {
-	print TO " <Newsgroup>\n";
-	print TO "  <url>$newsgroup</url>\n";
-	print TO "  <category>$catid</category>\n";
-	print TO " </Newsgroup>\n";
-    }
-
-    my(@symlinks) = ();
-    while($buffer =~ m|<symbolic r:resource=\".*?:Top(.*?)\"/>|sgo) {
-	my($string) = $1;
-	next if(!$string || $string =~ /^\s*$/o);
-	$string =~ s/_/ /go;
-	next if(!exists($path2catid{$string}));
-	push(@symlinks, $path2catid{$string});
-    }
-
-    my($symlink);
-    foreach $symlink (@symlinks) {
-	print TO " <Symlink>\n";
-	print TO "  <up>$catid</up>\n";
-	print TO "  <down>$symlink</down>\n";
-	print TO " </Symlink>\n";
-    }
-
-    my(@relateds) = ();
-    while($buffer =~ m|<related r:resource=\"Top(.*?)\"/>|sgo) {
-	my($string) = $1;
-	next if(!$string || $string =~ /^\s*$/o);
-	$string =~ s/_/ /go;
-	next if(!exists($path2catid{$string}));
-	push(@relateds, $path2catid{$string});
-    }
-
-    my($related);
-    foreach $related (@relateds) {
-	print TO " <Related>\n";
-	print TO "  <up>$catid</up>\n";
-	print TO "  <down>$related</down>\n";
-	print TO " </Related>\n";
+sub stats {
+    print "\nStatistics: \n" if(keys(%stats));
+    my($label, $value);
+    while(($label, $value) = each(%stats)) {
+	print "$label = $value\n";
     }
 }
 
+sub isprint {
+    my($string) = @_;
+    return !($string =~ /[\000-\037\177-\377]/);
+}
+
+$catid_max = 10000000;
+$record_max = 1;
+
+#
+# Parse a chunk going from a <Topic> tag to another.
+#
 sub handle_content {
     my($buffer) = @_;
 
     my($path, $catid);
-    ($path) = $buffer =~ m|<Topic r:id=\"Top(.*?)\">|o;
-    $path =~ s/_/ /go;
+    ($path) = $buffer =~ m|<Topic r:id=\"Top(.*?)\">|;
 
-    ($catid) = $buffer =~ m|<catid>(\d+)</catid>|so;
+    if(!isprint($path)) {
+	warn("ignore category with non printable characters $path") if($verbose);
+	$stats{'Non ascii printable category'}++;
+	return;
+    }
+    $path =~ s/_/ /g;
+    $path =~ s/\s+$//;
+
+    if($exclude && $path =~ /$exclude/s) {
+	warn("exclude category $path") if($verbose);
+	$stats{'Excluded Category'}++;
+	return;
+    }
+    
+    my($definition) = 0;
+    ($catid) = $buffer =~ m|<catid>(\d+)</catid>|s;
+    if(exists($path2catid{$path})) {
+	if($path2catid{$path} ne $catid) {
+	    warn("catid redefined for $path ($path2catid{$path} -> $catid) ignore") if($verbose);
+	    $catid = $path2catid{$path};
+	}
+	warn("multiple instances of $path") if($verbose);
+	$definition = 1;
+    }
+    if(defined($catid) && exists($catid2path{$catid})) {
+	warn("catid for $path already used by $catid2path{$catid}, ignore") if($verbose);
+	$stats{'Category id clash'}++;
+	$catid = undef;
+    }
     if(!defined($catid)) {
 	$catid = $catid_max++;
+	$stats{'Category id generated'}++;
+	warn("missing <catid> for $path, generate $catid") if($verbose);
+    }
+    $path2catid{$path} = $catid;
+    $catid2path{$catid} = $path;
+
+    #
+    # No category definition so far, add one.
+    #
+    if(!$definition) {
+	my($parent, $name) = $path =~ m|(.*)/(.*)|;
+	#
+	# Ignore root
+	#
+	if(!defined($name) || $name =~ m/^\s*$/) {
+	    $stats{'root'}++;
+	    warn("more than one root : $path") if($stats{'root'} > 1 && $verbose);
+	    return;
+	}
+	$name = fixup($name, 'No name');
+	my($parent_id) = find_parent_id($parent);
+
+	print CATEGORY "$catid\t$today\t$today\t0\t" . loadquote($name) . "\t0\t\n";
+	print CATEGORY2CATEGORY "0\t$today\t$today\t0\t$parent_id\t$catid\t\n";
     }
 
-    my($parent, $name) = $path =~ m|(.*)/(.*)|;
-    $path2catid{$path} = $catid;
-    #
-    # Ignore root
-    #
-    return if(!$name);
-    $name = fixup($name, 'No name');
-    my($parent_id) = find_parent_id($parent);
-
-    print TO <<EOF;
-
- <Category>
-  <rowid>$catid</rowid>
-  <name>$name</name>
-  <parent>$parent_id</parent>
- </Category>
-EOF
-
     my(@records);
-    while($buffer =~ m|<ExternalPage (.*?)</ExternalPage>|sgo) {
+    while($buffer =~ m|<ExternalPage (.*?)</ExternalPage>|sg) {
 	my($record) = $1;
 	my($url, $title, $description);
-	($url) = $record =~ m|about=\"(.*?)\"|so;
-	($title) = $record =~ m|<d:Title>(.*)</d:Title>|so;
-	($description) = $record =~ m|<d:Description>(.*)</d:Description>|so;
+	($url) = $record =~ m|about=\"(.*?)\"|s;
+	($title) = $record =~ m|<d:Title>(.*)</d:Title>|s;
+	($description) = $record =~ m|<d:Description>(.*)</d:Description>|s;
 
 	push(@records, {
 	    'rowid' => $record_max,
-	    'url' => fixup($url, 'Nourl'),
-	    'title' => fixup($title, 'No title'),
-	    'description' => fixup($description, 'No description'),
+	    'url' => loadquote(fixup($url, 'Nourl')),
+	    'title' => loadquote(fixup($title, 'No title')),
+	    'description' => loadquote(fixup($description, 'No description')),
 	});
 	$record_max++;
+	$stats{'Record loaded'}++;
     }
 
     my($record);
     foreach $record (@records) {
-	print TO <<EOF;
- <Link>
-  <row>$record->{'rowid'}</row>
-  <category>$catid</category>
- </Link>
-EOF
+	print ENTRY2CATEGORY "$today\t$today\t0\t$record->{'rowid'}\t$catid\n";
     }
 
     foreach $record (@records) {
-	print TO <<EOF;
- <Record table="dmozrecords">
-  <rowid>$record->{'rowid'}</rowid>
-  <url>$record->{'url'}</url>
-  <title>$record->{'title'}</title>
-  <description>$record->{'description'}</description>
- </Record>
-EOF
+	print DMOZRECORDS "0\t$today\t$today\t\t$record->{'url'}\t$record->{'title'}\t$record->{'description'}\n";
     }
 
+    $stats{'Category loaded'}++;
 }
 
 sub find_parent_id {
@@ -287,17 +266,14 @@ sub find_parent_id {
     if(exists($path2catid{$path})) {
 	return $path2catid{$path};
     } else {
-	my($parent, $name) = $path =~ m|(.*)/(.*)|o;
+	my($parent, $name) = $path =~ m|(.*)/(.*)|;
 	my($parent_id) = find_parent_id($parent);
 	my($path_id) = $catid_max++;
 	$path2catid{$path} = $path_id;
-	print TO <<EOF;
- <Category>
-  <rowid>$path_id</rowid>
-  <name>$name</name>
-  <parent>$parent_id</parent>
- </Category>
-EOF
+	$catid2path{$path_id} = $path;
+	warn("$path automatically generated") if($verbose);
+	$stats{'Generated category'}++;
+	print CATEGORY "$path_id\t$today\t$today\t0\t" . loadquote($name) . "\t0\t\n";
         return $path_id;    
     }
 }

@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/t/lib.pl,v 1.6 1999/09/07 14:48:04 loic Exp $
+# $Header: /cvsroot/Catalog/Catalog/t/lib.pl,v 1.6 1999/09/07 14:48:04 loic Exp $
 #
 use Cwd;
 use Catalog;

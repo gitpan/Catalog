@@ -88,10 +88,12 @@ doc/images/sqleditinsert.gif
 doc/images/sqleditsearch.gif
 doc/images/sqleditsearchform.gif
 doc/images/sqleditupdate.gif
+example/DMOZ/catalog.conf
+example/DMOZ/cbrowse.html
+example/DMOZ/templates.conf
 example/Makefile
 example/Makefile.PL
 example/admin/catalog.conf
-example/admin/sqledit.conf
 example/admin/templates.conf
 example/admin/urlcatalog_cedit.html
 example/admin/urlcatalog_csearch.html
@@ -231,7 +233,6 @@ php3/index.php3
 php3/mysql.conf.php3
 t/01catalog.t
 t/02rdf.t
-t/03dmoz.t
 t/conf/catalog.conf
 t/conf/cgi.conf
 t/conf/fulcrum.conf

@@ -17,7 +17,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/tools/main.pm,v 1.9 1999/05/31 18:48:28 loic Exp $
+# $Header: /cvsroot/Catalog/Catalog/lib/Catalog/tools/main.pm,v 1.10 1999/10/24 13:48:51 loic Exp $
 #
 # 
 #
@@ -98,17 +98,12 @@ sub initoptions {
     $self->initialize(
       ['help', '-help', 'get usage message'],
       ['fake', '-fake', 'do not actually perform any actions'],
-      ['exclusive', '-exclusive', 'implies -log, do not run more than one process with the same -log argument'],
-      ['log=s', '-log <name>', 'log all the error output in <name>'],
-      ['log_append', '-log_append', 'append to logfile instead of overriding'],
-      ['time=s', '-time <sec>', 'set system time to <sec> for test purpose'],
       ['error_stack', '-error_stack', 'whenever an error occur shows the full stack'],
       ['verbose=s', '-verbose {normal|high|...}', 
        '-verbose  verbosity level (default normal),
 		.*       everything,
 		normal   print messages reporting the progression,
 		high     huge output for debugging'],
-      ['kill', '-kill', 'in association with the -log option, kills siblings'],
       ['info', '-info', 'all informations about options'],
     );
 }
@@ -202,36 +197,6 @@ sub getopt {
 
     $self->info() if($::opt_info);
 
-    #
-    # Shoot them up :-)
-    #
-    if($::opt_kill) {
-	if($::opt_log) {
-	    daemon_logged_kill($::opt_log);
-	} else {
-	    $self->usage("-kill imply -log");
-	    exit(1);
-	}
-    }
-    #
-    # Automatic handling of the -log option (see util package)
-    #
-    if($::opt_log) {
-	dbg_output($::opt_log);
-    }
-    if($::opt_exclusive) {
-	if(!$::opt_log) {
-	    $self->usage("-exclusive implies -log");
-	}
-	if(daemon_logged_running($::opt_log)) {
-	    dbg("$::opt_log process is already running\n", "normal");
-	    exit(0);
-	}
-    }
-    if($::opt_log) {
-	daemon_logged_register($::opt_log);
-    }
-
     $self->{'getopt_done'} = 'yes';
 }
 
@@ -289,7 +254,7 @@ sub options {
 sub my_options {
     my($self, @valid) = @_;
 
-    return $self->extract_options('help', 'fake', 'base', 'error_stack', 'verbose', 'log', 'info', 'time', 'log_append', @valid);
+    return $self->extract_options('help', 'fake', 'base', 'error_stack', 'verbose', 'info', 'time', @valid);
 }
 
 #

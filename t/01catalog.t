@@ -8,7 +8,7 @@
 # Uncomment the ok() because it appear like slight leak, which is natural.
 # Run the test. The numbers, except for the first two, must not change at all.
 #
-# $Header: /usr/local/cvsroot/Catalog/t/01catalog.t,v 1.7 1999/07/01 17:51:09 loic Exp $
+# $Header: /cvsroot/Catalog/Catalog/t/01catalog.t,v 1.7 1999/07/01 17:51:09 loic Exp $
 #
 use strict;
 

@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog.pm,v 1.56 1999/09/07 14:48:04 loic Exp $
+# $Header: /cvsroot/Catalog/Catalog/lib/Catalog.pm,v 1.58 2000/01/27 18:08:37 loic Exp $
 #
 # 
 package Catalog;
@@ -37,7 +37,7 @@ use Catalog::tools::tools;
 
 @ISA = qw(Catalog::tools::sqledit Catalog::implementation);
 
-$VERSION = "1.01";
+$VERSION = "1.02";
 sub Version { $VERSION; }
 
 #
@@ -1921,6 +1921,10 @@ sub cedit_1 {
     #
     template_set($assoc, '_NAME_', $name);
     #
+    # Current category id
+    #
+    template_set($assoc, '_CATEGORYID_', $id);
+    #
     # Context
     #
     template_set($assoc, '_CONTEXT_',
@@ -1981,7 +1985,7 @@ sub cedit_1 {
 # HTML display sub-categories of a category for editing/display
 #
 sub category_searcher {
-    my($self, $template, $id, $info, $current_category) = @_;
+    my($self, $template, $id, $info, $current_category, $recursion) = @_;
     my($cgi) = $self->{'cgi'};
 
     #
@@ -1990,6 +1994,7 @@ sub category_searcher {
     my($name) = $cgi->param('name');
     my($catalog) = $self->cinfo()->{$name};
     my($category) = "catalog_category_$name";
+    my($path) = "catalog_path_$name";
     my($category2category) = "catalog_category2category_$name";
 
     template_set($template->{'assoc'}, '_CATEGORY_', $current_category->{'name'});
@@ -2000,20 +2005,38 @@ sub category_searcher {
        $catalog->{'info'} =~ /hideempty/ && $info->{'mode'} ne 'cedit') {
 	$where = " and a.count > 0 ";
     }
+
+    #
+    # Only display categories explicitely marked to be displayed
+    #
+    $where .= " and find_in_set('displaygrandchild',a.info)"
+	if($recursion);
+
     my($sql) = qq{
 	select a.rowid, a.name, a.count, b.info, c.pathname
-	from $category as a, $category2category as b, catalog_path_$name as c
-	where a.rowid = b.down and b.down = c.id and b.up = $id
+	from $category as a, $category2category as b, $path as c
+	where a.rowid = b.down and b.down = c.id and b.up = $id 
 		$where
 	order by a.name
     };
-    my($layout) = sub {
+    my($layout);
+    $layout = sub {
 	my($template, $name, $result, $context) = @_;
 
 	my($assoc) = $template->{'assoc'};
 	my($row) = $result->{$category};
 	my($issymlink) = defined($row->{'info'}) && $row->{'info'} =~ /symlink/;
-	
+
+        if(exists $template->{'children'}{'categories'}) {
+	    my($subid) = $result->{$category}{'rowid'};
+	    my($cur_category) = $self->db()->exec_select_one("select * from $category where rowid = $subid");
+
+	    my $count = $self->category_searcher($template->{'children'}{'categories'}, $subid, $info, $cur_category, 'recursion');
+	    if($count) {
+		$template->{'children'}{'categories'}{'skip'} = 0
+	    }
+	}
+
 	#
 	# Build forged tags
 	#

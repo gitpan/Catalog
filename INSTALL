@@ -1,4 +1,4 @@
-$Id: INSTALL,v 1.31 1999/09/07 14:48:03 loic Exp $
+$Id: INSTALL,v 1.33 2000/01/27 18:08:36 loic Exp $
 
 The Catalog home page is http://www.senga.org/
 
@@ -48,21 +48,27 @@ Requires:
 	  Catalog with minimal version number. All of them may be found on 
 	  CPAN (http://www.perl.com/CPAN/).
 
-	  DBI 1.08 - Database independent interface for Perl
+	  DBI 1.13 - Database independent interface for Perl
 
-	  DBD::mysql 2.0210 - mysql drivers for the Perl Database Interface (DBI)
+	  DBD::mysql 2.0410 - mysql drivers for the Perl Database Interface (DBI)
+	          found in Msql-Mysql-modules-1.2210. Example configuration is
+		  perl Makefile.PL --config --noprompt --mysql-install --nomsql-install \
+	               --nomsql1-install --mysql-incdir=${prefix}/include/mysql \
+	               --mysql-libdir=${prefix}/lib/mysql
 
 	  MD5 1.7 - Perl interface to the MD5 Message-Digest Algorithm
 
-	  CGI 2.46 - Simple Common Gateway Interface Class
+	  CGI 2.56 - Simple Common Gateway Interface Class
 
-	  XML::Parser 2.22 - parsing XML documents
+	  XML::Parser 2.27 - parsing XML documents
 
-	  XML::DOM 1.19 - building DOM Level 1 compliant document structures
+	  XML::DOM 1.25 - building DOM Level 1 compliant document structures
 
-	  Unicode::String 1.21 - String of Unicode characters
+	  MIME::Base64 2.11 - base64 and a quoted-printable encoder/decoder
 
-	  Unicode::Map8 0.06 - Mapping table between 8-bit chars and Unicode
+	  Unicode::String 2.05 - String of Unicode characters
+
+	  Unicode::Map8 0.09 - Mapping table between 8-bit chars and Unicode
 
 	  Text::Query 0.07     - Query parsing and resolver framework
 
@@ -121,6 +127,10 @@ Configuration:
               USERID The user id of the HTTP daemon. The configuration files
                      must have the same owner because the HTML interface
                      must be able to modify them.
+	      MYSQL_HOME Directory in which MySQL is installed. For instance
+			 if you have /usr/local/bin/mysqldump then the directory
+			 is /usr/local. If you have /opt/mysql-3.21/bin/mysqldump
+			 then use /opt/mysql-3.21 as the directory.
 	      MYSQL_BASE name of the MySQL database that will be used.
 	      MYSQL_USER name of the user for authentification when connecting
 		     to the MySQL server (--user option).
@@ -168,240 +178,6 @@ Configuration:
 	  make test
 
           make install
-
-Plateform specific:
--------------------
-
-These sections are helpers to install the software required before
-you can use Catalog. The distributions packages of all these specific 
-versions can be found on the senga site at http://www.senga.org/download.html.
-
-FreeBSD 3.1
------------
-#
-# Run these as root user
-#
-#=============================================================
-#
-# Install MySQL 
-#
-#
-# Get files from ftp://ftp.tcx.se/pub/mysql/Downloads/MySQL-3.22/
-#
-tar -zxvf mysql-3.22.22.tar.gz ; \
-	cd mysql-3.22.22 ; \
-	./configure --with-named-thread-libs=-lc_r ; \
-	make ; \
-	make install ; \
-	mysql_install_db ; \
-	safe_mysqld ; \
-	mysqladmin -u root password 'passpass'
-
-#=============================================================
-#
-# Install Apache 1.3.4
-#
-cd /usr/ports/www/apache13 ; \
-	make install ; \
-	/usr/local/sbin/apachectl start
-
-#=============================================================
-#
-# Install Catalog
-#
-# Use CPAN automatic installer
-#
-MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
- DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
- USE_CONFIG='' HTMLDIR=/usr/local/www/data/Catalog HTMLPATH=/Catalog \
- CGIDIR=/usr/local/www/cgi-bin CGIPATH=/cgi-bin \
- USERID=nobody \
- MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
- USE_DEFAULTS=1 \
- perl -MCPAN -e 'force install Bundle::Catalog'
-#
-# If something went wrong during the automatic install go to
-# $HOME/.cpan/build and try make install manually.
-#
-
-RedHat 5.2 and RedHat 6.0
--------------------------
-
-#
-# Run these as root user
-#
-#=============================================================
-#
-# Install perl5.005_02 (RedHat 5.2 only)
-# 
-# RedHat 5.2 is shipped with perl5.004_04 and we need perl5.005_02
-# This step is not necessary if you have a RedHat 6.0 because perl5.005_03 is
-# already installed.
-# Get file from http://www.perl.com/CPAN/src
-#
-tar -zxf perl5.005_02.tar.gz ; \
-	cd perl5.005_02 ; \
-	sh Configure -des ; \
-	make ; \
-	make install
-#
-# Check that we are using the just compiled perl
-#
-perl -v
-#=============================================================
-#
-# Install MySQL 
-#
-# First uninstall older release
-#
-rpm -e MySQL-devel
-rpm -e MySQL
-rpm -e MySQL-client
-#
-# Get files from ftp://ftp.tcx.se/pub/mysql/Downloads/MySQL-3.22/
-#
-rpm -ivh MySQL-client-3.22.19a-1.i386.rpm
-rpm -ivh MySQL-3.22.19a-1.i386.rpm
-#
-# Set up permissions as suggested by the installation.
-#
-/usr/bin/mysqladmin -u root password 'passpass'
-#
-# Finish MySQL installation
-#
-rpm -ivh MySQL-devel-3.22.19a-1.i386.rpm
-#=============================================================
-#
-# Install Catalog
-#
-# Install using CPAN automatic installer
-#
-MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
- DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
- USE_CONFIG='' HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
- CGIDIR=/home/httpd/cgi-bin CGIPATH=/cgi-bin \
- USERID=nobody \
- MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
- USE_DEFAULTS=1 \
- perl -MCPAN -e 'force install Bundle::Catalog'
-#
-# If something went wrong during the automatic install go to
-# $HOME/.cpan/build and try make install manually.
-#
-
-Solaris 2.6
------------
-#
-# These instructions assume that you're a normal user on a Solaris 2.6
-# system, without root privileges. The instructions do not differ much
-# if you have root access.
-# gtar stands for GNU tar (found on ftp://prep.ai.mit.edu/pub/gnu)
-#
-# Add our local bin directory in the path
-#
-export PATH=$HOME/local/bin:$PATH
-mkdir $HOME/local
-#=============================================================
-#
-# Build perl 
-# Get file from http://www.perl.com/CPAN/src
-#
-gtar -zxf perl5.005_02.tar.gz ; \
-	cd perl5.005_02 ; \
-	prefix=$HOME/local ; \
-	LD_LIBRARY_PATH=:`pwd`:$LD_LIBRARY_PATH \
-	sh Configure -des -Dprefix=$prefix -Dlocincpth=$prefix/include -Dloclibpth=$prefix/lib ; \
-	make ; \
-	make install
-#
-# Check that we are using the just compiled perl
-#
-perl -v
-#
-# Build texi2html
-# Get file from http://www.senga.org/download.html
-#
-cp texi2html $HOME/local/bin
-#
-# Edit $HOME/local/bin/texi2html and change
-# the first line to $HOME/local/bin/perl
-#
-chmod +x $HOME/local/bin/texi2html
-#=============================================================
-#
-# Install MySQL 
-#
-# Get files from ftp://ftp.tcx.se/pub/mysql/Downloads/MySQL-3.22
-#
-cd $HOME/local ; \
-	gtar -zxf mysql-3.22.19a-sun-solaris2.6-sparc.tar.gz ; \
-	ln -s mysql-3.22.19-sun-solaris2.6-sparc mysql ; \
-	cd mysql ; \
-	scripts/mysql_install_db ; \
-	bin/mysqld --basedir=. --datadir=data & \
-	./bin/mysqladmin -u root password 'passpass'
-#
-# Add mysql bin directory to your path
-#
-export PATH=$HOME/local/mysql/bin:$PATH
-#
-# Specify the location of the MySQL installation to
-# the MySQL server.
-#
-(
- echo "[mysqld]"
- echo "basedir=$HOME/local/mysql"
-) > $HOME/.my.cnf
-#=============================================================
-#
-# Build Apache
-#
-# Get file from http://www.apache.org/dist/
-#
-gtar -zxvf apache_1.3.4.tar.gz ; \
-	cd apache_1.3.4 ; \
-	prefix=$HOME/local ; \
-	./configure --prefix=$prefix ; \
-	make ; \
-	make install
-#
-# Edit $prefix/conf/httpd.conf and change the user and group
-# 
-# User <your user id>
-# Group <your group name>
-#
-# uncomment the line starting with ServerName
-#
-# ServerName www.yourmachine.org
-#
-# Edit $prefix/conf/srm.conf and uncomment the ScriptAlias line
-#
-# ScriptAlias /cgi-bin/ $HOME/local/cgi-bin/
-#
-# Run the server, by default on the 8080 port 
-# (http://www.yourmachine.org:8080/)
-#
-$HOME/local/bin/apachectl start
-#=============================================================
-#
-# Install Catalog
-#
-# Use CPAN automatic installer
-#
-MYSQL_HOME=$HOME/local/mysql IN_MYSQL_DISTRIBUTION=1 \
- DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
- USE_CONFIG='' HTMLDIR=$HOME/local/htdocs/Catalog HTMLPATH=/Catalog \
- CGIDIR=$HOME/local/cgi-bin CGIPATH=/cgi-bin \
- USERID=nobody \
- MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
- USE_DEFAULTS=1 \
- perl -MCPAN -e 'force install Bundle::Catalog'
-#
-# If something went wrong during the automatic install go to
-# $HOME/.cpan/build and try make install manually.
-#
---------------------------------------
-
 
 Loic Dachary
 loic@senga.org

@@ -1,3 +1,64 @@
+Thu Jan 27 10:14:19 2000  Loic Dachary  <loic@senga.org>
+
+        * Catalog-1.02 release
+
+	* doc/catalog.texinfo: update dmoz documentation, rename troubleshooting
+	  into FAQ and add dmoz related entries.
+	
+	* bin/convert_dmoz.PL: update usage with .gz. Decrease number
+	  of white space emmited to keep the connection open (/10). 
+	  Ignore all categories with name containing non ascii printable
+	  characters. Until UTF8 is updated at dmoz it only leads to
+	  trouble.
+	  Generate .txt files instead of XML files. Load directly in 
+	  mysql with -load.
+	  -v option to see what gets fixed.
+	  -exclude to remove categories matching regexp.
+	  Trim space at end of category path: source of duplicates.
+
+	* lib/Catalog/mysql/schema.pm: path now 255 chars, 128 too short for
+	  dmoz.
+	
+	* examples/DMOZ: add example specific to dmoz, in separate database
+	  dmoz
+
+	* lib/Catalog/dmoz.pm: automatically create the dmoz catalog when 
+	  setup of the catalog structures in the dmoz database
+	
+	* INSTALL (Requires): update all versions. Kill platform specific
+	  instructions because they were out of date. Should be in separate
+	  files.
+
+	* INSTALL.apache (prefix): change instructions assuming apache-1.3.9
+	  and mod_perl-1.21.
+
+Mon Nov 15 12:59:31 1999  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog/tools/sqledit.pm (requests_check): fix typo : requests instead of request
+
+Sun Oct 24 15:51:19 1999 Loic Dachary  <loic@ceic.com>
+
+	* examples/*/sqledit.conf: HTMLDIR now belongs to install.conf
+
+Fri Oct 22 10:50:44 1999  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog/tools/tools.pm (shell): change ksh to sh
+
+	* lib/Catalog/tools/main.pm (synopsis): remove non working options
+	  -log, -kill, -log_append
+
+Fri Oct 22 10:20:06 1999  Loic Dachary  <loic@ceic.com>
+
+	* INSTALL: add missing MYSQL_HOME doc
+
+Mon Oct 18 17:11:23 1999  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog/tools/sqledit.pm: fix vtable display bug (bad boundary test)
+
+Mon Sep 13 21:29:36 1999  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog.pm (cedit_1): add _CATEGORYID_ tag
+
 Tue Sep 07 16:13:00 1999  Loic Dachary  <loic@ceic.com>
 
         * Catalog-1.01 release

@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/Makefile.PL,v 1.42 1999/09/07 14:48:03 loic Exp $
+# $Header: /cvsroot/Catalog/Catalog/Makefile.PL,v 1.42 1999/09/07 14:48:03 loic Exp $
 #
 # This -*- perl -*- script writes the Makefile for Catalog
 

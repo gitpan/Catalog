@@ -16,7 +16,7 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/dmoz.pm,v 1.8 1999/07/01 18:23:47 loic Exp $
+# $Header: /cvsroot/Catalog/Catalog/lib/Catalog/dmoz.pm,v 1.10 2000/01/27 18:15:14 loic Exp $
 #
 package Catalog::dmoz;
 
@@ -46,26 +46,45 @@ $head = "
 
 <center><h3><font color=red>_COMMENT_</font></h3></center>
 
-Follow the instructions below to build your own DMOZ catalog. Load and conversion will take a long time
-(approximately 7 hours total). While the process is running, it sends white space characters to your
-navigator to prevent time out. Do not close your navigator until the operation is complete or the
-process will abort.
+Follow the instructions below to build your own DMOZ catalog. We do
+not use the XML loader for two reasons : the dmoz data is not really
+XML and needs checking and directly loading into the database using
+the <i>load data infile</i> is much faster.
 
 <p>
-<form action=_SCRIPT_ method=POST>
-<input type=hidden name=context value=cimport_dmoz>
 <ul>
 <li> Load files content.rdf.gz and structure.rdf.gz from <a href=http://dmoz.org/rdf.html>http://dmoz.org/rdf.html</a>
-and make sure they are in the same directory.
-<li> Enter the absolute path of the directory containing content.rdf.gz and structure.rdf.gz <br>
-<input type=text name=path size=50 value=_PATH_>
-<p>
-<li> Now you have two choices:
- <ul> 
- <li> <input type=submit name=action value='Convert it!'> Convert the content.rdf.gz and structure.rdf.gz file into a dmoz.rdf file suitable for
-loading into Catalog 
- <li> <input type=submit name=action value='Load it!'> If the dmoz.rdf file exists, build a catalog from it.
- </ul>
+and make sure they are in the same directory (let's say ~/dmoz).
+<li> cd ~/dmoz
+<li> convert_dmoz -exclude '^/Adult' -what content content.rdf.gz
+<li> It prints a dot from time to time to show that it does not hang.
+<li> It creates the following files:
+     <ul>
+     <li> category.txt (table catalog_category_dmoz)
+     <li> entry2category.txt (table catalog_entry2category_dmoz)
+     <li> category2category.txt (table catalog_category2category_dmoz)
+     <li> dmozrecords.txt (table dmozrecords)
+     </ul>
+<li> Load the files into the database using the following command
+<pre>
+convert_dmoz -load all ~/dmoz
+</pre>
+<li> Click on <b>browse</b> link in the Control Panel and check that
+     the catalog displays well. <b>Warning</b> the first time you click
+     on <b>browse</b> Catalog will rebuild some internal tables and it
+     will take some time to display. While working Catalog sends white
+     space characters to keep the connection busy and prevent timeouts.
+     These characters also tells you that Catalog is working and not hanging.
+     One character is printed for each category. If you have 200 000 categories
+     you should expect to download 200KB.
+<li> Click on the <b>count</b> link in the Control Panel to calculate
+     how many entries each category contains. It taks about the same time
+     to complete.
+     One character is printed for each category. If you have 200 000 categories
+     you should expect to download 200KB.
+<li> Check the FAQ in the documentation if you have problems and search 
+     the <a href=http://www.egroups.com/group/sengacatalog/info.html>Catalog mailing list</a>
+     for discussion on similar problems.
 </ul>
 </form>
 "),
@@ -81,55 +100,6 @@ sub initialize {
 
     my($db) = $self->{'db'};
     $db->resources_load('dmoz_schema', 'Catalog::dmoz::schema');
-}
-
-#
-# HTML massage dmoz files and load
-#
-sub cimport_dmoz {
-    my($self, $cgi) = @_;
-    $self->{'cgi'} = $cgi;
-
-    my($path) = $cgi->param('path');
-    my($convert) = $cgi->param('action') =~ /convert/i ? 'convert' : 'load';
-
-    $self->cerror("The path was not specified") if(!defined($path));
-
-    $self->cimport_dmoz_api($path, $convert);
-
-    if($convert eq 'convert') {
-	return $self->cimport(Catalog::tools::cgi->new({
-	    'context' => 'cimport',
-	    'path' => $path,
-	    'comment' => "The dmoz catalog was converted"
-	    }));
-    } elsif($convert eq 'load') {
-	return $self->ccontrol_panel(Catalog::tools::cgi->new({
-	    'context' => 'ccontrol_panel',
-	    'comment' => "The dmoz catalog was (re)loaded"
-	    }));
-    }
-}
-
-sub cimport_dmoz_api {
-    my($self, $path, $action) = @_;
-
-    if($action eq 'convert') {
-	my(%path);
-	my($file);
-	foreach $file (qw(content.rdf structure.rdf)) {
-	    $path{$file} = -r "$path/$file" ? "$path/$file" : "$path/$file.gz";
-	    $self->cerror("The $file or $file.gz file is missing or not readable in $path ") if(! -r $path{$file});
-	}
-	$self->cerror("The $path directory is not writable, cannot create dmoz.rdf") if(! -w $path);
-	$| = 1; print " ";
-	system("convert_dmoz $path{'content.rdf'} $path{'structure.rdf'} $path/dmoz.rdf");
-    } elsif($action eq 'load') {
-	$self->cerror("The $path/dmoz.rdf file is missing or not readable in $path ") if(! -r "$path/dmoz.rdf");
-	
-	my($external) = Catalog::dmoz::external->new();
-	$external->load($self, 'dmoz', "$path/dmoz.rdf");
-    }
 }
 
 sub cbuild_theme {
@@ -166,6 +136,22 @@ sub cdestroy_real {
     }
     
     return $ret;
+}
+
+#
+# Create needed structures for a catalog to work
+#
+sub csetup_api {
+    my($self) = @_;
+
+    $self->SUPER::csetup_api();
+
+    $self->db()->exec($self->db()->schema('dmoz_schema', 'dmozrecords'));
+    $self->cbuild_api('name' => 'dmoz',
+		      'tablename' => 'dmozrecords',
+		      'navigation' => 'theme');
+
+    $self->cinfo_clear();
 }
 
 #

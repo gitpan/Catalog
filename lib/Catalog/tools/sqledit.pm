@@ -468,7 +468,7 @@ sub requests_check {
     my($self) = @_;
 
     if(!$self->db()->table_exists('sqledit_requests')) {
-	$self->db()->exec($self->db()->schema('sqledit_schema', 'sqledit_request'));
+	$self->db()->exec($self->db()->schema('sqledit_schema', 'sqledit_requests'));
     }
 }
 
@@ -1712,26 +1712,30 @@ sub searcher_layout {
 	dbg("searcher_layout: style table", "sqledit");
 	my($template_row) = $template->{'children'}->{'row'};
 	error("missing row template") if(!defined($template_row));
-	my($count_max) = $params->{'columns'} || 5;
+	my($ncolumns) = $params->{'columns'} || 5;
+	if ($params->{'style'} eq 'vtable') {
+	    my($n) = scalar(@$results);
+	    my($max) = $n + $ncolumns - 1;
+	    my($rows) = int($max / $ncolumns);
+	    @$results = map {
+		my($c) = $_ % $ncolumns;
+		my($r) = int($_ / $ncolumns);
+		my($offset) = ($c * $rows) + $r;
+		$results->[$offset];
+		} 0..($max - 1);
+	}
 	my($count) = 0;
 	my($columns) = '';
-	if ($params->{'style'} eq 'vtable') {
-	  my $rows = int((@$results + $count_max - 1) / $count_max);
-	  @$results = map {
-	                my $c = $_ % $count_max;
-			my $r = int($_ / $count_max);
-	                $results->[($c * $rows) + $r]
-		      } 0..$#{$results};
-	}
 	foreach my $result (@$results) {
-	    if($count >= $count_max) {
+	    if($count >= $ncolumns) {
 		$template_entry->{'html'} = $columns;
 		push @html, $self->stemplate_build($template_row);
 		$columns = '';
 		$count = 0;
 	    }
 	    $count++;
-	    $columns .= &$func($template_entry, '_noname_', $result, $context);
+	    $columns .= &$func($template_entry, '_noname_', $result, $context)
+	      if $result;
 	}
 	if($count > 0) {
 	    $template_entry->{'html'} = $columns;

@@ -1,49 +1,37 @@
 #
-# Build Apache 1.3.4 with mod_perl-1.18, assuming that
+# Build Apache 1.3.9 with mod_perl-1.21, assuming that
 # you've installed perl in $prefix
 #
 
 #
 # Get file from http://www.apache.org/dist/
 #
-APACHE=apache_1.3.4
+APACHE=apache_1.3.9
 #
 # Get file from http://www.perl.com/CPAN/modules/by-module/Apache/
 #
-MOD_PERL=mod_perl-1.18
+MOD_PERL=mod_perl-1.21
 
 prefix=$HOME/local
 
-	#
-	# Minimal config to keep modules happy
-	#
-	( cd $APACHE ; \
-	  ./configure \
-	     --prefix=$prefix )
-	#
-	# Perl module
-	#
-	( cd $MOD_PERL ; \
-	  perl Makefile.PL DO_HTTPD=1 USE_APACI=1 EVERYTHING=1 )
-	#
-	# Really configure apache
-	#
-	( cd $APACHE ; \
-	  ./configure \
-	    --prefix=$prefix \
-	    --with-perl=$prefix/bin/perl \
-	    --activate-module=src/modules/perl/libperl.a \
-	    --enable-module=info \
-	    --enable-module=status \
-	    --enable-module=usertrack )
-	#
-	# Finaly install apache
-	#
-	( cd $APACHE ; \
-	  make ; \
-	  make install )
-	#
-	# Install perl extensions for mod_perl
-	#
-	( cd $MOD_PERL ; \
-	  make install )
+(
+        cd ${APACHE} 
+        ./configure --prefix=${prefix} \
+                --enable-module=all \
+                --enable-shared=max \
+                --disable-rule=WANTHSREGEX \
+                --disable-module=auth_dbm \
+                --with-perl=${prefix}/bin/perl
+        make 
+        make install
+)
+
+(
+        cd ${MOD_PERL}
+        perl Makefile.PL \
+                USE_APXS=1 \
+                WITH_APXS=${prefix}/bin/apxs \
+                EVERYTHING = 1
+        make 
+        make install
+)

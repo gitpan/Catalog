@@ -16,7 +16,7 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/external.pm,v 1.6 1999/07/02 12:11:48 loic Exp $
+# $Header: /cvsroot/Catalog/Catalog/lib/Catalog/external.pm,v 1.6 1999/07/02 12:11:48 loic Exp $
 #
 package Catalog::external;
 

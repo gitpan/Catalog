@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/conf/mysql.pl,v 1.2 1999/06/09 07:11:31 loic Exp $
+# $Header: /cvsroot/Catalog/Catalog/conf/mysql.pl,v 1.2 1999/06/09 07:11:31 loic Exp $
 
 require 5.005;
 use strict;

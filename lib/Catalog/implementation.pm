@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/implementation.pm,v 1.7 1999/07/02 13:36:53 loic Exp $
+# $Header: /cvsroot/Catalog/Catalog/lib/Catalog/implementation.pm,v 1.7 1999/07/02 13:36:53 loic Exp $
 #
 package Catalog::implementation;
 use strict;

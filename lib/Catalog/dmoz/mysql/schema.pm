@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/dmoz/mysql/schema.pm,v 1.1 1999/05/15 14:20:49 ecila40 Exp $
+# $Header: /cvsroot/Catalog/Catalog/lib/Catalog/dmoz/mysql/schema.pm,v 1.2 2000/01/27 18:08:37 loic Exp $
 #
 #
 # Table schemas
@@ -34,6 +34,23 @@ if(exists($ENV{'MYSQL_OLD'})) {
 }
 
 $resource = {
+                   'dmozrecords' => "
+create table dmozrecords (
+  #
+  # Table management information 
+  #
+  rowid int auto_increment not null,
+  created datetime not null,
+  modified timestamp not null,
+
+  info enum ('active', 'inactive') default 'active',
+  url char(255),
+  title char(255),
+  description text,
+  priority tinyint,
+
+  unique dmozrecord1 (rowid)
+)",
 		    'catalog_related' => "
 create table catalog_related_NAME (
   #

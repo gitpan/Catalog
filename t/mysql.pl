@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/t/mysql.pl,v 1.2 1999/06/09 07:18:39 loic Exp $
+# $Header: /cvsroot/Catalog/Catalog/t/mysql.pl,v 1.2 1999/06/09 07:18:39 loic Exp $
 #
 #
 # Copy and modify configuration files for test

@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/mysql/schema.pm,v 1.2 1999/05/17 10:13:42 ecila40 Exp $
+# $Header: /cvsroot/Catalog/Catalog/lib/Catalog/mysql/schema.pm,v 1.4 2000/01/28 09:15:39 loic Exp $
 #
 #
 # Table schemas
@@ -218,8 +218,12 @@ create table catalog_category_NAME (
 
   #
   # State information
+  # root : set on root category
+  # displaygrandchild : set if the category is to be shown
+  #               if the template that displays the children of
+  #               a category also displays grand children.
   #
-  info set ('root'),
+  info set ('root', 'displaygrandchild'),
   #
   # Full name of the category
   #
@@ -253,7 +257,7 @@ create table catalog_path_NAME (
   #
   # Full path name translated to ids
   #
-  path varchar(128) not null,
+  path varchar(255) not null,
   #
   # Id of the last component
   #
