@@ -1,12 +1,6 @@
-$Id: INSTALL,v 1.30 1999/07/03 12:07:03 loic Exp $
+$Id: INSTALL,v 1.31 1999/09/07 14:48:03 loic Exp $
 
 The Catalog home page is http://www.senga.org/
-
-WARNING: If the Text-Query and Text-Query-SQL perl modules cannot
-be found automatically, get them from 
-http://www.perl.com/CPAN/modules/by-authors/id/E/EB/EBOHLMAN/
-http://www.perl.com/CPAN/modules/by-authors/id/L/LD/LDACHARY/
-respectively.
 
 Quick start (assuming you have installed MySQL and Perl):
 ---------------------------------------------------------

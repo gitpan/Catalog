@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/Makefile.PL,v 1.41 1999/07/03 12:07:03 loic Exp $
+# $Header: /usr/local/cvsroot/Catalog/Makefile.PL,v 1.42 1999/09/07 14:48:03 loic Exp $
 #
 # This -*- perl -*- script writes the Makefile for Catalog
 
@@ -25,7 +25,7 @@ use strict;
 
 #--- Configuration section ---
 
-my(@programs_to_install) = qw(convert_dmoz contribute);
+my(@programs_to_install) = qw(convert_dmoz sengacontrib);
 
 use ExtUtils::MakeMaker;
 
@@ -34,7 +34,7 @@ require "conf/lib.pl";
 version_check('DBI', '1.08', 'require DBI;');
 version_check('MD5', '1.7', 'require MD5;');
 version_check('CGI', '2.46', 'require CGI;');
-version_check('XML::Parser', '2.22', 'require XML::Parser;');
+version_check('XML::Parser', '2.26', 'require XML::Parser;');
 version_check('XML::DOM', '1.19', 'require XML::DOM;');
 version_check('MIME::Base64', '2.11', 'require MIME::Base64;');
 version_check('Unicode::String', '2.02', 'require Unicode::String;');

@@ -16,17 +16,12 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/t/lib.pl,v 1.5 1999/05/31 18:33:08 loic Exp $
+# $Header: /usr/local/cvsroot/Catalog/t/lib.pl,v 1.6 1999/09/07 14:48:04 loic Exp $
 #
 use Cwd;
 use Catalog;
 
 require "conf/lib.pl";
-
-#
-# Pretend we are in a mod_perl environment
-#
-$ENV{'GATEWAY_INTERFACE'} = 'CGI-Perl';
 
 #$::opt_verbose = 'RDF';
 #$::opt_error_stack = 'yes';

@@ -5,9 +5,9 @@
 @setchapternewpage odd
 @c %**end of header
 
-@set RCSID $Id: catalog.texinfo,v 1.33 1999/07/03 09:53:32 loic Exp $
-@set VERSION 1.00
-@set UPDATED July 1999
+@set RCSID $Id: catalog.texinfo,v 1.35 1999/09/07 14:48:03 loic Exp $
+@set VERSION 1.01
+@set UPDATED September 1999
 @set PERL perl5.005_02
 @set MySQL MySQL-3.22.19a-gamma
 
@@ -144,6 +144,7 @@ Template files introduction
 * Database table tags::         database table tags
 * Record list part::            Record list part
 * Multipage results template::  Multipage results template
+* Server side includes::        
 * Actions that takes a long time::  Actions that takes a long time
 
 Catalog template files
@@ -3964,6 +3965,7 @@ on the action associated to the template.
 * Database table tags::         database table tags
 * Record list part::            Record list part
 * Multipage results template::  Multipage results template
+* Server side includes::        
 * Actions that takes a long time::  Actions that takes a long time
 @end menu
 
@@ -4210,11 +4212,14 @@ then the part used to display the search results will be @strong{row}.
 Otherwise the part used will be @strong{entry}.
 
 @table @samp
-@item style = table
+@item style = {table,vtable}
 Use @strong{row} part. The @strong{columns} parameter is the number of
 columns generated. For each record, the @strong{entry} part is repeated.
 If the @strong{entry} part has been repeated @strong{columns} times, the
 @strong{row} part is displayed with the generated entries.
+
+If @strong{style} value is @strong{table} the columns are ordered horizontaly,
+if @strong{style} value is @strong{vtable} the columns are ordered verticaly.
 
 @example
 ...
@@ -4293,7 +4298,7 @@ template, @xref{Database table tags, ,@code{Database table tags}}.
 @end table
 
 
-@node Multipage results template, Actions that takes a long time, Record list part, Template files introduction
+@node Multipage results template, Server side includes, Record list part, Template files introduction
 @section Multipage results template
 
 All the cgi-bin that want to display their result using more than one HTML
@@ -4336,7 +4341,31 @@ output above.
 List of hidden fields necessary to perform the search. Must
 be included in each @code{form}.
 
-@node Actions that takes a long time,  , Multipage results template, Template files introduction
+@node Server side includes, Actions that takes a long time, Multipage results template, Template files introduction
+@section Server side includes
+
+@cindex Server side include
+@cindex file inclusion in templates
+@cindex template file inclusion
+
+A limited support of the server side include syntax is provided in the
+template files. If an include instruction is found, the cgi expands it.
+For instance:
+
+@example
+
+<!--#include virtual="/dir/file.html" -->
+
+@end example
+
+will be expanded with the content of the file found 
+at @code{$DOCUMENT_ROOT/dir/file.html}. This is done again and again until
+no more include instruction is found, allowing nested inclusions.
+Note that the tag substitution is done
+@strong{before} expanding the included file. Therefore, no tag 
+substitution will occur in the included files. 
+
+@node Actions that takes a long time,  , Server side includes, Template files introduction
 @section Actions that takes a long time
 
 Some cgi-bin actions may take a very long time, such as catalog loading or
@@ -4846,7 +4875,7 @@ Path component of the current category. _PATH0_ is the rightmost component of th
 @item _PATHFILE_
 Full path of the current category, as built by the navigation of the user,
 @xref{Catalog configuration file, ,@code{Catalog configuration file}}.
-In this for the characters white space, slash, simple quote and double quote
+In this path the characters white space, slash, simple quote and double quote
 have been replaced by underscore. Therefore _PATHFILE_ can ben used as the
 name of a file, hence the name. For instance @code{/Sport and amusement/Vacations/} will
 be @code{_Sport_and_amusement_Vacations_}
@@ -4855,6 +4884,40 @@ be @code{_Sport_and_amusement_Vacations_}
 @item _PATHFILE[0-9]+_
 Path component of the current category, transformed in the same was as 
 _PATHFILE_. _PATHFILE0_ is the rightmost component of the path.
+
+@cindex _PATHFILE<perl range>_
+@item _PATHFILE<perl range>_
+Path components of the current category. The @strong{perl range}
+specification refer to the Perl notation for range of elements in an
+array. For instance @code{0..1} stands for the first two elements,
+@code{-2..-1} the last two.  For more information see the Perl manual
+pages. Since the minus sign and the dot are forbiden in tags, you must
+use FILEual equivalents: MINUS for the minus sign and DOTDOT for the two
+dots. Hence, to specify the first two elements of the path you can use
+@code{_PATHFILE0DOTDOT1_} and to specify the last two you can use 
+@code{_PATHFILEMINUS2DOTDOTMINUS1_}. 
+
+@cindex _PATHTEXT_
+@item _PATHTEXT_
+Full path of the current category, as built by the navigation of the user,
+@xref{Catalog configuration file, ,@code{Catalog configuration file}}.
+
+@cindex _PATHTEXT[0-9]+_
+@item _PATHTEXT[0-9]+_
+Path component of the current category, as built by the navigation of the user.
+_PATHTEXT0_ is the rightmost component of the path.
+
+@cindex _PATHTEXT<perl range>_
+@item _PATHTEXT<perl range>_
+Path components of the current category. The @strong{perl range}
+specification refer to the Perl notation for range of elements in an
+array. For instance @code{0..1} stands for the first two elements,
+@code{-2..-1} the last two.  For more information see the Perl manual
+pages. Since the minus sign and the dot are forbiden in tags, you must
+use textual equivalents: MINUS for the minus sign and DOTDOT for the two
+dots. Hence, to specify the first two elements of the path you can use
+@code{_PATHTEXT0DOTDOT1_} and to specify the last two you can use 
+@code{_PATHTEXTMINUS2DOTDOTMINUS1_}. 
 
 @cindex _CATEGORY_
 @item _CATEGORY_

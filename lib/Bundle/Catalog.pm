@@ -1,6 +1,6 @@
 package Bundle::Catalog;
 
-$VERSION = "1.00"
+$VERSION = "1.01"
 
 1;
 
@@ -24,7 +24,7 @@ MD5 1.7		     - Perl interface to the MD5 Message-Digest Algorithm
 
 CGI 2.46	     - Simple Common Gateway Interface Class
 
-XML::Parser 2.22     - parsing XML documents
+XML::Parser 2.26     - parsing XML documents
 
 XML::DOM 1.19	     - building DOM Level 1 compliant document structures
 
@@ -38,11 +38,16 @@ Text::Query 0.07     - Query parsing and resolver framework
 
 Text::Query::BuildSQL 0.05 - Query implementation for SQL databases
 
-Catalog 1.00         - Resources catalog management and display
+Catalog              - for to get to know thyself
 
 =head1 DESCRIPTION
 
-This bundle defines all reqreq modules for Catalog.
+This bundle includes all the modules used by the Perl Catalog
+module.
+
+A I<Bundle> is a module that simply defines a collection of other
+modules.  It is used by the L<CPAN> module to automate the fetching,
+building and installing of modules from the CPAN ftp archive sites.
 
 =head1 AUTHOR
 

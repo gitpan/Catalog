@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog.pm,v 1.54 1999/07/03 09:53:32 loic Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog.pm,v 1.56 1999/09/07 14:48:04 loic Exp $
 #
 # 
 package Catalog;
@@ -37,7 +37,7 @@ use Catalog::tools::tools;
 
 @ISA = qw(Catalog::tools::sqledit Catalog::implementation);
 
-$VERSION = "1.00";
+$VERSION = "1.01";
 sub Version { $VERSION; }
 
 #
@@ -1915,6 +1915,7 @@ sub cedit_1 {
     # Category name
     #
     template_set($assoc, '_CATEGORY_', $category->{'name'});
+    template_set($assoc, '_CATEGORY-CODED_', CGI::escape($category->{'name'}));
     #
     # Catalog name
     #
@@ -1992,6 +1993,7 @@ sub category_searcher {
     my($category2category) = "catalog_category2category_$name";
 
     template_set($template->{'assoc'}, '_CATEGORY_', $current_category->{'name'});
+    template_set($template->{'assoc'}, '_CATEGORY-CODED_', CGI::escape($current_category->{'name'}));
 
     my($where) = '';
     if(defined($catalog->{'info'}) &&

@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/conf/Makefile.PL,v 1.11 1999/05/31 18:33:07 loic Exp $
+# $Header: /usr/local/cvsroot/Catalog/conf/Makefile.PL,v 1.12 1999/08/12 09:40:08 loic Exp $
 #
 # This -*- perl -*- script writes the Makefile for Catalog
 
@@ -46,7 +46,7 @@ sub misc_ask {
 	yesno('html', \%h,
 		 {
 		     'prompt' => "
-Do you you want HTML formated documentation ? ",
+Do you want HTML formated documentation ? ",
 		     'yesno' => 1,
 		     'default' => exists($ENV{'DOC_HTML'}) ? $ENV{'DOC_HTML'} : 'yes',
 		 });
@@ -55,7 +55,7 @@ Do you you want HTML formated documentation ? ",
 	yesno('info', \%h,
 		 {
 		     'prompt' => "
-Do you you want Emacs info formated documentation ? ",
+Do you want Emacs info formated documentation ? ",
 		     'yesno' => 1,
 		     'default' => exists($ENV{'DOC_INFO'}) ? $ENV{'DOC_INFO'} : 'no',
 		 });
@@ -65,7 +65,7 @@ Do you you want Emacs info formated documentation ? ",
 	yesno('ps', \%h,
 		 {
 		     'prompt' => "
-Do you you want Postscript formated documentation ? ",
+Do you want Postscript formated documentation ? ",
 		     'yesno' => 1,
 		     'default' => exists($ENV{'DOC_PS'}) ? $ENV{'DOC_PS'} : 'no',
 		 });

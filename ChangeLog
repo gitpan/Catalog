@@ -1,3 +1,61 @@
+Tue Sep 07 16:13:00 1999  Loic Dachary  <loic@ceic.com>
+
+        * Catalog-1.01 release
+
+        * lib/Bundle/Catalog.pm: removed version number associated to
+	  catalog. Will hopefully fix the fact that Catalog bundle was
+	  obsolete on CPAN. *sigh*.
+	
+        * doc/catalog.texinfo: add documentation for server side includes
+	  handling in templates.
+	
+	* example/Makefile (install): changed bugous ln -s ../*.conf to
+	  $(config_dir)/*.conf
+
+	* lib/Catalog/tools/sqledit.pm (selector): set default imageutil
+	  if not specified.
+
+	* conf/lib.pl (locate_cmds): get rid of unpredictable which command
+	  (Tim Bunce <Tim.Bunce@ig.co.uk>)
+
+	* lib/Bundle/Catalog.pm: require XML::Parser 2.26, fixes late memory
+	  deallocation bug found in 2.23.
+
+Tue Sep 07 13:14:52 1999  Loic Dachary  <loic@ceic.com>
+
+        * lib/Catalog/path.pm : implement _PATH{FILE,TEXT}<perl range>_ and
+	  update documentation.
+	
+	* bin/contribute.PL : rename bin/sengacontrib.PL
+
+Wed Sep 01 18:01:24 1999  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog/tools/sqledit.pm: use CGI() to prevent sub hidden overload 
+	  (Graham Barr <gbarr@pobox.com>)
+
+Wed Aug 18 11:20:04 1999  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog/tools/tools.pm: patch for recursive sub templates 
+	  (Graham Barr <gbarr@pobox.com>)
+
+Thu Aug 12 11:44:27 1999  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog/tools/sqledit.pm: vertical table (style=vtable) (Graham Barr <gbarr@pobox.com>)
+
+1999-07-16  Loic Dachary  <loic@ceic.com>
+
+	* doc/catalog.texinfo (cedit.html): added _PATHTEXT_ ("Otis Gospodnetic" <otis@DOMINIS.com>)
+
+1999-07-13  Loic Dachary  <loic@ceic.com>
+
+	* Installation bug fixes ("Otis Gospodnetic" <otis@DOMINIS.com>)
+
+1999-07-07  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog/tools/sqledit.pm (imagedisplay): missing db() indirection
+
+	* bin/contribute.PL: now stand alone + fix minor version bug sprintf("%02d"
+
 1999-07-03  Loic Dachary  <loic@ceic.com>
 
         * Catalog-1.00 release

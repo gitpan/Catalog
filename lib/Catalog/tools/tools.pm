@@ -17,7 +17,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/tools/tools.pm,v 1.17 1999/06/09 07:18:39 loic Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/tools/tools.pm,v 1.18 1999/09/07 14:48:04 loic Exp $
 #
 # 
 package Catalog::tools::tools;
@@ -256,20 +256,36 @@ sub template_parse {
     #
     # Extract subtemplates if any
     #
-    my($start) = '<\!--\s*start\s+(\w+)\s*-->';
     my(%children);
-    while($content =~ /$start/io) {
-	my($subname) = $1;
-	my($rest) = $';
-	my($end) = '<\!--\s*end\s+' . $subname . '\s*-->';
-	if($rest !~ /$end/i) {
-	    croak("template $file: missing end for $subname");
+    my @depth;
+    while($content =~ /(<\!--\s*(start|end)\s+(\w+)\s*-->)/iog) {
+	my($se,$subname) = ($2,$3);
+	my $end = pos($content);
+	my $len = length($1);
+	if($se eq 'start') {
+	    push(@depth,[$subname,$end,$len]);
+	    next;
 	}
-	my($sub_content) = $`;
-	$children{$subname} = template_parse($file, $sub_content, $subname);
-	my($all) = '<\!--\s*start\s+' . $subname . '\s*-->.*?'. $end;
+	elsif(@depth) {
+	    croak("template $file: missing end for $subname")
+		unless ($subname eq $depth[-1]->[0]);
+	    if(@depth > 1) {
+	        pop @depth;
+		next;
+	    }
+	}
+	else {
+	    croak("template $file: unexpected end for $subname");
+	}
+	my $start = $depth[0]->[1];
+	my $sublen = $end - $len - $start;
+	$children{$subname} = template_parse($file,
+	            substr($content,$start,$sublen), $subname);
 	my($tag) = '_SUBTEMPLATE' . $subname . '_';
-	$content =~ s/$all/$tag/s;
+	$start -=  $depth[0]->[2];
+	substr($content,$start,$end-$start) = $tag;
+	pos($content) = $start + length($tag);
+	@depth = ();
     }
 
     #

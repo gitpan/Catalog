@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/conf/lib.pl,v 1.2 1999/05/31 18:33:07 loic Exp $
+# $Header: /usr/local/cvsroot/Catalog/conf/lib.pl,v 1.3 1999/09/07 14:48:03 loic Exp $
 #
 #
 # Perl module configuration utility functions
@@ -89,6 +89,7 @@
 # #
 # install_ask();
 # 
+use strict;
 
 %::var2env = (
 	      'use_config' => 'USE_CONFIG',
@@ -315,12 +316,13 @@ sub locate_cmds {
 
     my($cmd);
     foreach $cmd (@cmds) {
-	my($where) = `which $cmd 2>/dev/null`;
-	if($? == 0 && $where !~ /^\s*$/os) {
-	    $where =~ s/\n//gs;
-	    $conf->{$cmd} = $where;
-	} else {
-	    $conf->{$cmd} = undef;
+	$conf->{$cmd} = undef;
+	my($dir);
+	foreach $dir (split(/:/, $ENV{'PATH'})) {
+	    if(-x "$dir/$cmd" && ! -d "$dir/$cmd") {
+		$conf->{$cmd} = "$dir/$cmd";
+		last;
+	    }
 	}
     }
 }

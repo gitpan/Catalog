@@ -19,7 +19,7 @@ catalog.ps: catalog.texinfo $(IMAGES_EPS) $(IMAGES_TXT)
 catalog_toc.html: catalog.texinfo
 	rm -fr tmp ; mkdir tmp ; cd tmp ; ln -s ../images .
 	perl -p -e 's/^\s*\@/\@/' < catalog.texinfo > tmp/catalog.texinfo
-	cd tmp ; $(texi2html) -acc -split_node catalog.texinfo ; rm catalog.texinfo images ; mv * ..
+	cd tmp ; perl $(texi2html) -acc -split_node catalog.texinfo ; rm catalog.texinfo images ; mv * ..
 	rm -fr tmp
 
 #

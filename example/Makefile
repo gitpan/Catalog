@@ -12,16 +12,16 @@ install:
 	cd $(cgidir)/browse ; \
 	cp $(cgidir)/Catalog . ; \
 	perl -p -e 's|^base.*|base = $(BASE)|' < $(config_dir)/mysql.conf > mysql.conf ; \
-	ln -s ../cgi.conf . ; \
-	ln -s ../db.conf . ; \
-	ln -s ../install.conf . ; \
+	ln -s $(config_dir)/cgi.conf . ; \
+	ln -s $(config_dir)/db.conf . ; \
+	ln -s $(config_dir)/install.conf . ; \
 	perl -pi -e 's|_HTMLPATH_|$(htmlpath)|' sqledit.conf
 	cd $(cgidir)/admin ; \
 	cp $(cgidir)/Catalog . ; \
 	perl -p -e 's|^base.*|base = $(BASE)|' < $(config_dir)/mysql.conf > mysql.conf ; \
-	ln -s ../cgi.conf . ; \
-	ln -s ../db.conf . ; \
-	ln -s ../install.conf . ; \
+	ln -s $(config_dir)/cgi.conf . ; \
+	ln -s $(config_dir)/db.conf . ; \
+	ln -s $(config_dir)/install.conf . ; \
 	perl -pi -e 's|_HTMLPATH_|$(htmlpath)|' sqledit.conf
 	$(MAKE) load
 

@@ -16,16 +16,222 @@ $Config{'startperl'}
 
 print OUT <<'!NO!SUBS!';
 
+package Options;
+
 use strict;
-use Catalog::tools::main;
-use Catalog::tools::tools;
+
+use Getopt::Long;
+use File::Basename;
+
+#
+# Build a Main object.
+#  
+# options - hash table that is a list of the options recognized by
+#           Main and in the syntax used by the GetOptions function
+#           see the mygetopt::Long package for more information.
+# short_usage - hash table mapping option name to a short description,
+#               something like '-noheuristics -heuristics'. Not really
+#               a description.
+# long_usage - hash table mapping option name to a human readable
+#              explanation of the option.
+# default - hash table mapping option name to the default value for the 
+#           option. 
+# order - a list of the options in order. The usage command use this
+#         list to show the options in order.
+# 
+sub new {
+    my($type) = shift;
+    my($self) = {};
+
+    bless($self, $type);
+
+    $self->{'options'} = {};
+    $self->{'short_usage'} = {};
+    $self->{'long_usage'} = {};
+    $self->{'default'} = {};
+    $self->{'order'} = [];
+    #
+    # Set default options
+    #
+    $self->initoptions();
+    #
+    # Override with caller choice
+    #
+    $self->initialize(@_);
+    #
+    # Parse the collected options
+    #
+    $self->getopt();
+
+    return $self;
+}
+
+#
+# Set the options available to everyone
+#
+sub initoptions {
+    my($self) = shift;
+
+    $self->initialize(
+      ['help', '-help', 'get usage message'],
+      ['fake', '-fake', 'do not actually perform any actions'],
+    );
+}
+
+#
+# Build a usage string, display it and die.
+#
+sub usage {
+    my($self, $message) = @_;
+    my($command) = basename($0);
+
+    my($short_usage);
+    my($long_usage);
+    my($order) = $self->{'order'};
+    my($option);
+    foreach $option (reverse(@$order)) {
+	$short_usage .= "$self->{'short_usage'}->{$option}";
+	$long_usage .= "$self->{'long_usage'}->{$option}";
+    }
+
+    die "$message\nusage: $command $short_usage\n$long_usage";
+}
+
+#
+# Build a synopsis line for manual entries
+#
+sub synopsis {
+    my($self, $message) = @_;
+    my($command) = basename($0);
+
+    my($synopsis);
+    my($order) = $self->{'order'};
+    my($option);
+    foreach $option (reverse(@$order)) {
+	$synopsis .= "$self->{'short_usage'}->{$option}";
+    }
+
+    return "$command $synopsis";
+}
+
+# Analyse the options in @ARGV according to the specifications in
+# 'options' variable.
+#
+sub getopt {
+    my($self) = shift;
+
+    return if($self->{'getopt_done'});
+
+    my($options) = $self->{'options'};
+
+    if (!GetOptions($self->{'linkage'}, keys(%$options)) || $::opt_help) {
+	$self->usage();
+    }
+
+    $self->{'getopt_done'} = 'yes';
+}
+
+#
+# Analyze the options specs given in argument.
+# The specs are a table with entries containing three fields:
+#   . option description for GetOptions (see mygetopt::Long)
+#   . short description
+#   . long description
+#
+sub initialize {
+    my($self) = shift;
+
+    my($spec);
+    my($order) = $self->{'order'};
+    foreach $spec (@_) {
+	my($option, $flags, $explain) = @$spec;
+	my($name) = $option;
+	$name =~ s/[=!].*//;
+	my($var);
+	eval "\$var = \\\$::opt_$name";
+	$self->{'linkage'}->{$name} = $var;
+	$self->{'options'}->{$option} = 1;
+	$self->{'short_usage'}->{$option} = "[$flags] ";
+	$self->{'long_usage'}->{$option} = "\t$flags\t$explain\n";
+	$self->{'explain'}->{$option} = "$explain";
+	push(@$order, $option) if(!grep($_ eq $option, @$order));
+    }
+}
+
+#
+# Build an arg string suitable for running a new command.
+# Only the options of the package given in argument are analyzed.
+# Only the options in @valid are returned.
+#
+sub options {
+    my($self, $package, @valid) = @_;
+
+    my($my_options) = "${package}::my_options";
+    my(@options);
+    my($options);
+    foreach $options ($self->${my_options}(@valid)) {
+#	print "options = $options\n";
+	if(!grep($_ eq $options, @options)) {
+	    push(@options, $options);
+	}
+    }
+    return "@options";
+}
+
+#
+# Each package should define this function to call extract_options
+# in a given order.
+#
+sub my_options {
+    my($self, @valid) = @_;
+
+    return $self->extract_options('help', 'fake', @valid);
+}
+
+#
+# Backbone of options. Make the string rebuilding the options given
+# in @ARGV initialy.
+#
+sub extract_options {
+    my($self, @valid) = @_;
+    
+    my($options) = $self->{'options'};
+    my($option);
+    my($tmp);
+    foreach $option (keys(%$options)) {
+	my($flag) = $option =~ /^(.+?)\b.*/;
+	next if(!grep($_ eq $flag, @valid));
+	my($var) = "::opt_$flag";
+	
+	if(defined($$var)) {
+	    if($option =~ /!$/) {
+		if($$var) {
+		    $tmp .= "-$flag ";
+		} else {
+		    $tmp .= "-no$flag ";
+		}
+	    } elsif($option =~ /=[is]$/) {
+		if($$var ne $self->{'default'}->{$flag}) {
+		    $tmp .= "-$flag '$$var' ";
+		}
+	    } else {
+		$tmp .= "-$flag ";
+	    }
+	}
+    }
+    return $tmp;
+}
+
+package main;
+
+use strict;
 
 my($product);
 my($base);
 
 sub main {
     $::opt_module = 'Catalog';
-    my($main) = Catalog::tools::main->new(
+    my($main) = Options->new(
               ['contributor=s', '-contributor <name>', 'contributor name'],
               ['commit', '-commit', 'commit changes & ask for integration'],
               ['checkout', '-checkout', 'checkout latest branch'],
@@ -50,7 +256,7 @@ sub main {
 	    my($info) = cvsinfo('trunc');
 	    my($branch) = "$base-$info->{'newest_version'}-$::opt_contributor";
 	    my($from) = $::opt_merge;
-	    my($to) = $from + 1;
+	    my($to) = sprintf("%02d", $from + 1);
 	    run("cvs update -ko -j $branch-$from -j $branch-$to");
 	} elsif($::opt_branch) {
 	    my($info) = cvsinfo('trunc');
@@ -161,7 +367,7 @@ sub cvsinfo {
 		if(!exists($info{'trunc_major'})) {
 		    $info{'trunc_major'} = $1;
 		    $info{'trunc_minor'} = $2;
-		    $info{'trunc_next_minor'} = $2 + 1;
+		    $info{'trunc_next_minor'} = sprintf("%02d", $2 + 1);
 		}
 	    }
 	} else {

@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/path.pm,v 1.2 1999/04/30 08:40:29 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/path.pm,v 1.4 1999/09/07 14:48:04 loic Exp $
 #
 # 
 package Catalog::path;
@@ -26,6 +26,7 @@ use vars qw(@EXPORT_OK @ISA);
 require Exporter;
 
 use MD5;
+use Carp;
 
 use Catalog::tools::tools;
 
@@ -237,6 +238,41 @@ sub pathname_html_array {
     return @html;
 }
 
+sub path_text_array {
+    my($self) = @_;
+
+    my(%params) = (
+		   'root_label' => 'root',
+		   );
+
+    my($key);
+    foreach $key (qw(root_label)) {
+	my($param);
+	if(defined($self->{"path_$key"})) {
+	    if(ref($self->{"path_$key"})) {
+		$param = $self->{"path_$key"}->{$self->{'name'}};
+	    } else {
+		$param = $self->{"path_$key"};
+	    }
+	}
+	$params{$key} = $param if(defined($param));
+    }
+
+    my(@text) = $params{'root_label'};
+    
+    my($path) = $self->path();
+    #
+    # Root has no path at all, do nothing
+    #
+    if($path) {
+	my($rows) = $self->{'db'}->exec_select("select rowid,name from catalog_category_$self->{'name'} where rowid in ( $path )");
+	my(%rowid2name) = map { $_->{'rowid'} => $_->{'name'} } @$rows;
+	push(@text, map { $rowid2name{$_} } split(',', $path));
+    }
+
+    return @text;
+}
+
 sub pathname_html {
     my($self) = @_;
 
@@ -260,6 +296,9 @@ sub ptemplate_set {
 	    } elsif($spec =~ /^FILE/o) {
 		$todo{'pathfile'} = 1;
 		$skip = 0;
+	    } elsif($spec =~ /^TEXT/o) {
+		$todo{'pathtext'} = 1;
+		$skip = 0;
 	    }
 	}
     }
@@ -273,20 +312,45 @@ sub ptemplate_set {
     @path = $self->pathname_html_array() if($todo{'path'});
     my(@pathfile);
     @pathfile = $self->pathname_array() if($todo{'pathfile'});
+    my(@pathtext);
+    @pathtext = $self->path_text_array() if($todo{'pathtext'});
 
     foreach $tag (keys(%$assoc)) {
-	if($tag =~ /^_PATH(.*)_$/o) {
+	if($tag =~ /^_PATH(.*)_$/) {
 	    my($spec) = $1;
 	    if($spec eq '') {
 		template_set($assoc, $tag, join('', @path));
-	    } elsif($spec =~ /^(\d+)$/o) {
+	    } elsif($spec =~ /^(\d+)$/) {
 		my($index) = $1;
 		template_set($assoc, $tag, $path[$index]) if(defined($path[$index]));
-	    } elsif($spec =~ /^FILE$/o) {
+	    } elsif($spec =~ /^FILE$/) {
 		template_set($assoc, $tag, join('_', @pathfile));
-	    } elsif($spec =~ /^FILE(\d+)$/o) {
+	    } elsif($spec =~ /^FILE(.*)$/) {
 		my($index) = $1;
-		template_set($assoc, $tag, $pathfile[$index]) if(defined($pathfile[$index]));
+		if($index !~ /^\d+$/) {
+		    $index =~ s/MINUS/-/g;
+		    $index =~ s/DOTDOT/../g;
+		    my(@list);
+		    eval "\@list = \@pathfile[$index]";
+		    croak("syntacticaly invalid range in $spec") if($@);
+		    template_set($assoc, $tag, join('/', @list));
+		} else {
+		    template_set($assoc, $tag, $pathfile[$index]) if(defined($pathfile[$index]));
+		}
+	    } elsif($spec =~ /^TEXT$/) {
+		template_set($assoc, $tag, join('/', @pathtext));
+	    } elsif($spec =~ /^TEXT(.*)$/) {
+		my($index) = $1;
+		if($index !~ /^\d+$/) {
+		    $index =~ s/MINUS/-/g;
+		    $index =~ s/DOTDOT/../g;
+		    my(@list);
+		    eval "\@list = \@pathtext[$index]";
+		    croak("syntacticaly invalid range in $spec") if($@);
+		    template_set($assoc, $tag, join('/', @list));
+		} else {
+		    template_set($assoc, $tag, $pathtext[$index]) if(defined($pathtext[$index]));
+		}
 	    }
 	}
     }

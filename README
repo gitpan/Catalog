@@ -1,4 +1,4 @@
-$Header: /usr/local/cvsroot/Catalog/README,v 1.8 1999/07/03 09:53:32 loic Exp $
+$Header: /usr/local/cvsroot/Catalog/README,v 1.10 1999/09/07 14:48:03 loic Exp $
 
 What is it ?
 ------------
@@ -60,15 +60,23 @@ The Catalog home page is http://www.senga.org/download.html
 Contributors
 ------------
 
-Tim Bunce (Tim.Bunce@ig.co.uk)
+See http://www.senga.org/contribute.html for contribution guidelines.
+
+Tim Bunce <Tim.Bunce@ig.co.uk>
  Fixed many bugs, contributed ideas, implemented *_fill in templates and
  compressed dmoz handling.
 
-Gilles Polart (g.polart@atrid.fr)
+Gilles Polart <g.polart@atrid.fr>
  Provides invaluable feedback on dmoz data loading.
 
-Weston J. Bustraan (weston@infinityteldata.net)
+Weston J. Bustraan <weston@infinityteldata.net>
  Is the author of the PHP3 display functions.
+
+Graham Barr <gbarr@pobox.com>
+ Root page configuration, vertical tables, bug fixes and enhancements.
+
+Author
+------
 
 Loic Dachary
 loic@senga.org

@@ -21,7 +21,7 @@ use vars qw($head %default_templates);
 use strict;
 
 use Carp;
-use CGI;
+use CGI ();
 use Catalog::tools::cgi;
 use Catalog::db;
 use Catalog::tools::tools;
@@ -277,6 +277,12 @@ sub selector {
     }
 
     $cgi = Catalog::tools::cgi->new() if(!defined($cgi));
+
+    #
+    # Unless explicitly specified otherwise, the script handling 
+    # image display is the current script.
+    #
+    $self->{'imageutil'} = $cgi->script_name() if(!exists($self->{'imageutil'}));
 
     my($verbose) = $cgi->param('verbose');
     if(defined($verbose)) {
@@ -729,7 +735,7 @@ sub row2edit_1 {
 	    $html .= "<input type=text size=20 name=$field value=\"$value_quoted\"></td>\n";
 	} elsif($type eq 'blob' ) {
 	    if(defined($value)) {
-		my($imageutil) = $self->{'imageutil'};
+		my($imageutil) = $self->imageutil();
 		my($primary) = $info->{'_primary_'};
 		$html .= "<img src=\"$imageutil?table=$table&field=$field&$primary=$row->{$primary}&context=imagedisplay&content=image/gif\"> ";
 	    }
@@ -755,7 +761,7 @@ sub imagedisplay {
     my($table) = $cgi->param('table');
     my($info) = $self->db()->info_table($table);
     my($primary) = $cgi->param($info->{'_primary_'});
-    my($image) = $self->exec_select_one("select $field from $table where $info->{'_primary_'} = $primary")->{$field};
+    my($image) = $self->db()->exec_select_one("select $field from $table where $info->{'_primary_'} = $primary")->{$field};
 
     return $image;
 }
@@ -798,7 +804,7 @@ sub row2view {
 		    $quoted_value = Catalog::tools::cgi::myescapeHTML(substr($value, 0, 30)) . "...";
 		}
 	    } elsif($type eq 'blob' && defined($value)) {
-		my($imageutil) = $self->{'imageutil'};
+		my($imageutil) = $self->imageutil();
 		my($primary) = $info->{'_primary_'};
 		$value = "<img src=\"$imageutil?table=$table&field=$field&$primary=$row->{$primary}&context=imagedisplay&content=image/gif\"> ";
 		$quoted_value = $value;
@@ -1021,7 +1027,7 @@ sub row2assoc_1 {
 	    $self->db()->dict_link($desc, $table, $field);
 	    $assoc->{$tag} = $self->choice($table, $desc, 'select', $field, $value, $use_default);
 	} elsif($type eq 'blob' && defined($value)) {
-	    my($imageutil) = $self->{'imageutil'};
+	    my($imageutil) = $self->imageutil();
 	    my($primary) = $info->{'_primary_'};
 	    $assoc->{$tag} = "<img src=\"$imageutil?table=$table&field=$field&$primary=$row->{$primary}&context=imagedisplay&content=image/gif\"> ";
 	} elsif(defined($value)) {
@@ -1366,54 +1372,6 @@ sub hook_cgi2query {
     return (\%query, \@tags);
 }
 
-#sub rel_split {
-#    my($value) = @_;
-#
-#    my($html) = '';
-#    dbg("rel_split $value", "sqledit");
-#    my(@results) = rel_split_1($value);
-#    my($result);
-#    foreach $result (@results) {
-#	my($pair);
-#	foreach $pair (@$result) {
-#	    $html .= " $pair->[0] x $pair->[1]";
-#	}
-#	$html .= "<br>";
-#    }
-#    return $html;
-#}
-#
-#@::primes = (503, 401, 307, 211, 101, 3);
-#
-#sub rel_split_1 {
-#    my($value) = @_;
-#
-##    dbg("rel_split_1 : $value", "sqledit");
-#    return undef if($value <= 0);
-#
-#    my(@results);
-#    my($prime);
-#    foreach $prime (@::primes) {
-#	my($factor);
-#	foreach $factor (1..10) {
-#	    my($v) = $value - $prime * $factor;
-#	    next if($v < 0);
-#	    my(@s) = rel_split_1($v);
-#	    if(defined(@s)) {
-#		if(defined(@results)) {
-#		    foreach (@results) {
-#			unshift(@$_, [ $prime, $factor ]);
-#		    }
-#		} else {
-#		    push(@results, [ [ $prime, $factor ] ]);
-#		}
-#	    }
-#	}
-#    }
-#    return @results;
-#}
-#
-
 sub hook_search {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1713,7 +1671,7 @@ sub searcher_layout {
     if(!exists($params->{'style'}) || $params->{'style'} eq 'list') {
 	$template_entry = $template->{'children'}->{'entry'};
 	error("missing entry template") if(!defined($template_entry));
-    } elsif($params->{'style'} eq 'table') {
+    } elsif($params->{'style'} =~ /^v?table$/) {
 	dbg("searcher_layout: style table", "sqledit");
 	my($template_row) = $template->{'children'}->{'row'};
 	error("missing row template") if(!defined($template_row));
@@ -1750,13 +1708,21 @@ sub searcher_layout {
 	}
 	$template_entry->{'html'} = join "", @html;
     }
-    elsif($params->{'style'} eq 'table') {
+    elsif($params->{'style'} =~ /^v?table$/) {
 	dbg("searcher_layout: style table", "sqledit");
 	my($template_row) = $template->{'children'}->{'row'};
 	error("missing row template") if(!defined($template_row));
 	my($count_max) = $params->{'columns'} || 5;
 	my($count) = 0;
 	my($columns) = '';
+	if ($params->{'style'} eq 'vtable') {
+	  my $rows = int((@$results + $count_max - 1) / $count_max);
+	  @$results = map {
+	                my $c = $_ % $count_max;
+			my $r = int($_ / $count_max);
+	                $results->[($c * $rows) + $r]
+		      } 0..$#{$results};
+	}
 	foreach my $result (@$results) {
 	    if($count >= $count_max) {
 		$template_entry->{'html'} = $columns;
@@ -2376,6 +2342,12 @@ sub db {
     my($self) = @_;
 
     return $self->{'db'};
+}
+
+sub imageutil {
+    my($self) = @_;
+
+    return $self->{'imageutil'};
 }
 
 sub serror {

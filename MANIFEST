@@ -1,4 +1,3 @@
-CONTRIBUTIONS
 COPYING
 ChangeLog
 DESIGN
@@ -7,8 +6,8 @@ INSTALL.apache
 MANIFEST
 Makefile.PL
 README
-bin/contribute.PL
 bin/convert_dmoz.PL
+bin/sengacontrib.PL
 cgi-bin/Catalog.PL
 cgi-bin/Makefile
 cgi-bin/Makefile.PL
