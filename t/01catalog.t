@@ -8,7 +8,7 @@
 # Uncomment the ok() because it appear like slight leak, which is natural.
 # Run the test. The numbers, except for the first two, must not change at all.
 #
-# $Header: /usr/local/cvsroot/Catalog/t/01catalog.t,v 1.5 1999/05/15 14:20:50 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/t/01catalog.t,v 1.7 1999/07/01 17:51:09 loic Exp $
 #
 use strict;
 
@@ -29,9 +29,9 @@ require "t/lib.pl";
 #$::opt_verbose = 'mysql|normal';
 $::opt_error_stack = 1;
 
-rundb();
+conftest_generic();
 
-plan test => 83;
+plan test => 84;
 
 
 mem_size();
@@ -643,8 +643,7 @@ my($cgi, $catalog, $t, $html);
 $catalog = Catalog->new();
 $cgi = Catalog::tools::cgi->new();
 $cgi->param('context' => 'csearch');
-$cgi->param('text' => 'entry5 cat1');
-$cgi->param('boolean' => 'and');
+$cgi->param('text' => '+entry5 +cat1');
 $cgi->param('name' => "$catname");
 $cgi->param('dump' => "t/tmp/html/catalog$Test::ntest.html");
 $t = $catalog->selector($cgi);
@@ -677,6 +676,34 @@ $cgi->param('dump' => "t/tmp/html/catalog$Test::ntest.html");
 $t = $catalog->selector($cgi);
 
 ok($t =~ /no category matches/i, 1, "searching non existent category");
+
+#print STDERR size() . "\n";
+#}
+$catalog->close();
+}
+show_size();
+
+mem_size();
+{
+#foreach (1..100) {
+#print STDERR size() . " -> ";
+print "
+#
+# Advanced query
+#
+";
+my($cgi, $catalog, $t, $html);
+$catalog = Catalog->new();
+$cgi = Catalog::tools::cgi->new();
+$cgi->param('context' => 'csearch');
+$cgi->param('text' => 'cat3 or cat1');
+$cgi->param('name' => "$catname");
+$cgi->param('query_mode' => 'advanced');
+$cgi->param('dump' => "t/tmp/html/catalog$Test::ntest.html");
+$t = $catalog->selector($cgi);
+
+ok($t =~ m:/cat1/:i &&
+   $t =~ m:/cat3/:i, 1, "searching cat1 cat3 using advanced syntax ");
 
 #print STDERR size() . "\n";
 #}
@@ -1163,7 +1190,7 @@ $catalog->close();
 }
 show_size();
 
-stopdb();
+conftest_generic_clean();
 
 # Local Variables: ***
 # mode: perl ***

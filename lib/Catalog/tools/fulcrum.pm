@@ -16,12 +16,12 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
-package Ecila::tools::fulcrum;
+package Catalog::tools::fulcrum;
 use strict;
 
 use DBI;
 use DBD::Fulcrum;
-use Ecila::tools::tools;
+use Catalog::tools::tools;
 use Carp qw(cluck);
 
 sub new {

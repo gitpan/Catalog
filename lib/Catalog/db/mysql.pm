@@ -200,14 +200,14 @@ sub insert {
     dbg("$sql", "mysql");
     my($stmt) = $base->prepare("$sql") or error("cannot prepare $sql : " . $base->errstr());
     $stmt->execute() or error("cannot execute $sql: " . $base->errstr());
-    my($insertid) = $self->{'insertid'} = $stmt->{'insertid'};
-    $stmt->finish();
-    if(keys(%dict)) {
+    my $insertid = $stmt->{'mysql_insertid'};
+    $insertid = $stmt->{'insertid'} unless defined $insertid; # old DBD::mysql
+    $self->{'insertid'} = $insertid;
+    if (%dict) {
 	$self->dict_update($table, \%dict, $insertid);
     }
-    if(defined($self->{'hook'})) {
-	my($hook) = $self->{'hook'};
-	$hook->hook_insert($table, $insertid);
+    if ($self->{'hook'}) {
+	$self->{'hook'}->hook_insert($table, $insertid);
     }
     return $insertid;
 }
@@ -343,19 +343,12 @@ sub update {
 	dbg($sql, "mysql");
 	my($base) = $self->connect();
 	my($stmt) = $base->prepare("$sql") or error("cannot prepare $sql : " . $base->errstr());
-	$stmt->execute() or error("cannot execute $sql: " . $base->errstr());
+	my $affected = $stmt->execute() or error("cannot execute $sql: " . $base->errstr());
 	#
 	# Return 1 if update occured at least on a row, even
 	# if nothing was modified in that row.
 	#
-	my($affected) = $stmt->{'affected_rows'};
-	my($exec_info) = $self->exec_info();
-	$stmt->finish();
-	if(($affected == 0) &&
-	   ($exec_info =~ /matched: 0 /)) {
-	} else {
-	    $ret = 1;
-	}
+	$ret = 1 unless $affected == 0 and $self->exec_info() =~ /^[^:]+: 0 /;
     }
 
     if(defined($self->{'hook'})) {
@@ -413,8 +406,8 @@ sub exec {
 	dbg("$sql\n", "mysql");
 	my($stmt) = $base->prepare("$sql") or error("cannot prepare $sql : " . $base->errstr());
 	$stmt->execute() or error("cannot execute $sql: " . $base->errstr());
-	$self->{'insertid'} = $stmt->{'insertid'};
-	$stmt->finish();
+	$self->{'insertid'} = $stmt->{'mysql_insertid'};
+	$self->{'insertid'} = $stmt->{'insertid'} unless defined $self->{'insertid'};
 	if(defined($base->{'info'}) && $base->{'info'} =~ /Warnings: [1-9]/) {
 	    error("request $sql issued warnings : " . $self->exec_info());
 	}
@@ -448,24 +441,34 @@ sub select {
     }
 
     dbg("$sql$limit\n", "mysql");
-    my($stmt) = $base->prepare("$sql$limit") or error("cannot prepare $sql$limit : " . $base->errstr());
-    $stmt->execute() or error("cannot execute $sql$limit: " . $base->errstr());
+    my($stmt) = $base->prepare("$sql$limit")
+		or error("cannot prepare $sql$limit: " . $base->errstr());
+    $stmt->execute()
+		or error("cannot execute $sql$limit: " . $base->errstr());
 
     my(@result);
     my($hash_ref);
-    while($hash_ref = $stmt->fetchrow_hashref()) {
+    while($hash_ref = $stmt->fetchrow_hashref('NAME_lc')) {
 	push(@result, { %$hash_ref });
     }
     $stmt->finish();
 
-    if(!$sql_total) {
-	$sql_total = $sql;
-	$sql_total =~ s/select\s+.*?\s+from/select count(*) from/;
+    my $ntuples;
+    if ($limit) {
+	if(!$sql_total) {
+	    $sql_total = $sql;
+	    $sql_total =~ s/select\s+.*?\s+from\s/select count(*) from /i;
+	}
+	$stmt = $base->prepare("$sql_total")
+		or error("cannot prepare $sql_total : " . $base->errstr());
+	$stmt->execute()
+		or error("cannot execute $sql_total: " . $base->errstr());
+	$ntuples = $stmt->fetchrow_array();
+	$stmt->finish();
     }
-    $stmt = $base->prepare("$sql_total") or error("cannot prepare $sql_total : " . $base->errstr());
-    $stmt->execute() or error("cannot execute $sql_total: " . $base->errstr());
-    my($ntuples) = $stmt->fetchrow_array();
-    $stmt->finish();
+    else {
+	$ntuples = scalar @result;
+    }
     
     return (\@result, $ntuples);
 }
@@ -533,8 +536,10 @@ sub info_table {
 	    #
 	    # Type looks like ('val','val'), suited for eval
 	    #
-	    eval "\@values = $row->{'Type'}";
-	    croak() if($@);
+		my $type = $row->{'Type'};
+		$type = $1 if $type =~ /^(.*)$/; # untaint
+	    eval "\@values = ($type)";
+	    croak("Evaluating type list '$type': $@") if $@;
 	    $desc{'size'} = length($row->{'Type'});
 	    $desc{'values'} = { map { $_ => $_ } @values };
 	} elsif($row->{'Type'} =~ /(varchar|text|char)/) {

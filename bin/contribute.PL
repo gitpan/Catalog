@@ -72,6 +72,7 @@ sub main {
 	my($info) = cvsinfo('contributor');
 	my($cmd);
 	if($::opt_commit) {
+	    run("make clean realclean") if(-f 'Makefile');
 	    run("cvs update");
 	    run("cvs commit");
 	    run("cvs tag -F $info->{'next_change'}");

@@ -1,5 +1,5 @@
 #
-# $Header: /usr/local/cvsroot/Catalog/t/02rdf.t,v 1.5 1999/05/15 14:20:50 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/t/02rdf.t,v 1.6 1999/05/31 18:33:08 loic Exp $
 #
 use strict;
 
@@ -9,7 +9,7 @@ require "t/lib.pl";
 
 plan test => 2;
 
-rundb();
+conftest_generic();
 create_catalogs();
 
 my($catname) = 'urltheme';
@@ -52,8 +52,7 @@ $catalog->close();
 }
 show_size();
 
-
-stopdb();
+conftest_generic_clean();
 
 # Local Variables: ***
 # mode: perl ***

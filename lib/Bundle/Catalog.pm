@@ -1,6 +1,6 @@
 package Bundle::Catalog;
 
-$VERSION = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
+$VERSION = "1.00"
 
 1;
 
@@ -16,7 +16,7 @@ Bundle::Catalog - A bundle to install all Catalog related modules
 
 =head1 CONTENTS
 
-DBI 1.02             - Database independent interface for Perl
+DBI 1.08             - Database independent interface for Perl
 
 DBD::mysql 2.0210    - mysql drivers for the Perl Database Interface (DBI)
 
@@ -34,12 +34,15 @@ Unicode::String 1.21 - String of Unicode characters
 
 Unicode::Map8 0.06   - Mapping table between 8-bit chars and Unicode
 
-Catalog 0.05         - Resources catalog management and display
+Text::Query 0.07     - Query parsing and resolver framework
+
+Text::Query::BuildSQL 0.05 - Query implementation for SQL databases
+
+Catalog 1.00         - Resources catalog management and display
 
 =head1 DESCRIPTION
 
 This bundle defines all reqreq modules for Catalog.
-
 
 =head1 AUTHOR
 

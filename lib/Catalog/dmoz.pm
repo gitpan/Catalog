@@ -16,7 +16,7 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/dmoz.pm,v 1.5 1999/05/15 14:20:48 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/dmoz.pm,v 1.8 1999/07/01 18:23:47 loic Exp $
 #
 package Catalog::dmoz;
 
@@ -57,13 +57,12 @@ process will abort.
 <ul>
 <li> Load files content.rdf.gz and structure.rdf.gz from <a href=http://dmoz.org/rdf.html>http://dmoz.org/rdf.html</a>
 and make sure they are in the same directory.
-<li> Uncompress content.rdf.gz and structure.rdf.gz.
-<li> Enter the absolute path of the directory containing content.rdf and structure.rdf <br>
+<li> Enter the absolute path of the directory containing content.rdf.gz and structure.rdf.gz <br>
 <input type=text name=path size=50 value=_PATH_>
 <p>
 <li> Now you have two choices:
  <ul> 
- <li> <input type=submit name=action value='Convert it!'> Convert the content.rdf and structure.rdf file into a dmoz.rdf file suitable for
+ <li> <input type=submit name=action value='Convert it!'> Convert the content.rdf.gz and structure.rdf.gz file into a dmoz.rdf file suitable for
 loading into Catalog 
  <li> <input type=submit name=action value='Load it!'> If the dmoz.rdf file exists, build a catalog from it.
  </ul>
@@ -116,12 +115,15 @@ sub cimport_dmoz_api {
     my($self, $path, $action) = @_;
 
     if($action eq 'convert') {
+	my(%path);
 	my($file);
 	foreach $file (qw(content.rdf structure.rdf)) {
-	    $self->cerror("The $file file is missing or not readable in $path ") if(! -r "$path/$file");
+	    $path{$file} = -r "$path/$file" ? "$path/$file" : "$path/$file.gz";
+	    $self->cerror("The $file or $file.gz file is missing or not readable in $path ") if(! -r $path{$file});
 	}
 	$self->cerror("The $path directory is not writable, cannot create dmoz.rdf") if(! -w $path);
-	system("convert_dmoz $path/content.rdf $path/structure.rdf $path/dmoz.rdf");
+	$| = 1; print " ";
+	system("convert_dmoz $path{'content.rdf'} $path{'structure.rdf'} $path/dmoz.rdf");
     } elsif($action eq 'load') {
 	$self->cerror("The $path/dmoz.rdf file is missing or not readable in $path ") if(! -r "$path/dmoz.rdf");
 	
@@ -185,7 +187,7 @@ sub Related {
     my($name) = $self->{'name'};
 
     $catalog->db()->insert("catalog_related_$name",
-		     %$record);
+			   %$record);
 }
 
 sub Newsgroup {
@@ -197,7 +199,7 @@ sub Newsgroup {
     my($name) = $self->{'name'};
 
     $catalog->db()->insert("catalog_newsgroup_$name",
-		     %$record);
+			   %$record);
 }
 
 1;

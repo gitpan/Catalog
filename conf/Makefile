@@ -19,6 +19,7 @@ clean:
 
 realclean: clean
 	mv install.conf.orig install.conf
+	mv db.conf.orig db.conf
 	mv mysql.conf.orig mysql.conf
 
 test:

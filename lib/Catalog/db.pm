@@ -60,8 +60,8 @@ sub instance_load {
 	error("$db_package failed: $@$advice\n");
     }
     my($instance);
-    eval "\$instance = $db_package->new()";
-    error("$@") if(!defined($instance));
+    eval { $instance = $db_package->new() };
+    error("$@") unless $instance;
 
     $self->{'instance'} = $instance;
 }

@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog.pm,v 1.44 1999/05/18 18:51:04 loic Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog.pm,v 1.54 1999/07/03 09:53:32 loic Exp $
 #
 # 
 package Catalog;
@@ -37,7 +37,7 @@ use Catalog::tools::tools;
 
 @ISA = qw(Catalog::tools::sqledit Catalog::implementation);
 
-$VERSION = "0.10";
+$VERSION = "1.00";
 sub Version { $VERSION; }
 
 #
@@ -129,28 +129,24 @@ Shall I set it up for you ? It will create a table named <b>catalog</b>.
 </center>
 "),
        'ccontrol_panel.html' => template_parse('inline ccontrol_panel',
-"$head
-<title>Catalog control panel</title>
+qq{$head
+<title>Catalog Control Panel</title>
 
-<center><h3>Catalog control panel</h3></center>
-
-<center><h3><font color=red>_COMMENT_</font></h3></center>
-<table border=1>
-<tr><td colspan=2 align=middle><b>Configuration files</b></td></tr>
-<tr><td>MySQL</td><td><a href=_SCRIPT_?context=confedit&file=mysql.conf>edit</a></td></tr>
-<tr><td>CGI</td><td><a href=_SCRIPT_?context=confedit&file=cgi.conf>edit</a></td></tr>
-<tr><td>Catalog</td><td><a href=_SCRIPT_?context=confedit&file=catalog.conf>edit</a></td></tr>
-<tr><td>sqledit</td><td><a href=_SCRIPT_?context=confedit&file=sqledit.conf>edit</a></td></tr>
-</table>
+<h3>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+Catalog Control Panel</h3>
 <p>
-<table border=1>
-<tr><td colspan=5 align=middle><b>Existing catalogs</b></td></tr>
+<h3><font color=red>_COMMENT_</font></h3>
+<p>
+
+<table border=1 cellpadding=6>
+<tr><td colspan=9 align=middle><b>Maintain Existing Catalogs</b></td></tr>
 <!-- start catalogs -->
 <tr>
- <td><b><a href=_SCRIPT_?context=ccatalog_edit&name=_NAME_>_NAME_</a></b></td>
+ <td><b>_NAME_</b></td>
  <td><a href=_SCRIPT_?context=cbrowse&name=_NAME__ID_>browse</a></td>
  <td><a href=_SCRIPT_?context=_COUNT_&name=_NAME_>count</a></td>
  <td><a href=_SCRIPT_?context=cdestroy&name=_NAME_>destroy</a></td>
+ <td><a href=_SCRIPT_?context=ccatalog_edit&name=_NAME_>configure</a></td>
  <!-- start theme -->
  <td><a href=_SCRIPT_?context=cedit&name=_NAME__ID_>edit</a></td>
  <td><a href=_SCRIPT_?context=cdump&name=_NAME_>dump</a></td>
@@ -161,20 +157,28 @@ Shall I set it up for you ? It will create a table named <b>catalog</b>.
 <!-- end catalogs -->
 </table>
 <p>
+<table cellpadding=6><tr><td>
+<a href=_SCRIPT_/>Simplified browsing on default catalog</a><br>
+<a href=_SCRIPT_?context=cimport>Load catalog from file</a><br>
+<a href=_SCRIPT_?context=ccontrol_panel>Redisplay control panel</a><br>
+<a href=_SCRIPT_?context=cdemo>Create a demo table (urldemo)</a><br>
+</td><td>
+<a href=_HTMLPATH_/catalog_toc.html><img src=_HTMLPATH_/images/help.gif alt=Help border=0 align=middle></a>
+</td></tr></table>
 <form action=_SCRIPT_ method=POST>
 <input type=hidden name=context value=cbuild>
 Create _NAVIGATION_ catalog on table _TABLES_
 <input type=submit value='Create it!'>
 </form>
 <p>
-<table><tr><td>
-<a href=_SCRIPT_?context=cimport>Load from file</a><br>
-<a href=_SCRIPT_/>Simplified browsing</a><br>
-<a href=_SCRIPT_?context=ccontrol_panel>Redisplay control panel</a><br>
-<a href=_SCRIPT_?context=cdemo>Create a demo table (urldemo)</a><br>
-</td><td>
-<a href=_HTMLPATH_/catalog_toc.html><img src=_HTMLPATH_/images/help.gif alt=Help border=0 align=middle></a>
-</td></tr></table>
+<table border=1 cellpadding=2>
+<tr><td colspan=2 align=middle><b>&nbsp; Configuration Files &nbsp;</b></td></tr>
+<tr><td>MySQL</td><td><a href=_SCRIPT_?context=confedit&file=mysql.conf>edit</a></td></tr>
+<tr><td>CGI</td><td><a href=_SCRIPT_?context=confedit&file=cgi.conf>edit</a></td></tr>
+<tr><td>Catalog</td><td><a href=_SCRIPT_?context=confedit&file=catalog.conf>edit</a></td></tr>
+<tr><td>sqledit</td><td><a href=_SCRIPT_?context=confedit&file=sqledit.conf>edit</a></td></tr>
+</table>
+<p>
 <pre></b><i>
 <font size=-1>
 Catalog-$VERSION <a href=http://www.senga.org/>http://www.senga.org</a>
@@ -195,19 +199,48 @@ Copyright 1998, 1999 Loic Dachary
     Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 </font>
 </i></pre>
-"),
+}),
        'csearch.html' => template_parse('inline csearch',
 "$head
 <title>Search results for _TEXT_</title>
 
+<!-- start simple -->
 <center>
 <form action=_SCRIPT_ method=POST>
 _HIDDEN_
 <input type=text size=40 name=text value='_TEXT-QUOTED_'>
 <input type=submit value='search'><br>
 _WHAT-MENU_
+<a href=_SCRIPT_?context=csearch_form&querymode=advanced&_PARAMS_>Advanced Search</a>
+<br>
+Example: <b>+catalog senga -query</b>
 </form>
 </center>
+<!-- end simple -->
+
+<!-- start advanced -->
+<form action=_SCRIPT_ method=POST>
+_HIDDEN_
+<b>Your search query</b>
+<br>
+<textarea name=text cols=50 rows=4 wrap>_TEXT-QUOTED_</textarea>
+<br>
+_WHAT-MENU_
+_QUERYMODE-MENU_
+<input type=submit value='search'>
+<p>
+Advanced search syntax examples:
+<dl>
+<dt> Boolean operators
+<dd> <b>catalog and senga and not query or freeware near software</b>
+<dt> Precedence
+<dd> <b>catalog and ( query or freeware )</b>
+<dt> Fields
+<dd> <b>comment: ( catalog and query ) or url: edu</b>
+</dl>
+</form>
+<!-- end advanced -->
+
 <!-- start categories -->
 <center>Categories matching <b>_TEXT_</b> (_COUNT_)</center>
 <ul>
@@ -265,6 +298,7 @@ _PAGES_
 <input type=hidden name=mode value=_CONTEXT_>
 <input type=text size=40 name=text value='_TEXT-QUOTED_'>
 <input type=submit value='search'><br>
+<a href=_SCRIPT_?_PARAMS_&mode=cedit&querymode=advanced&context=csearch_form>Advanced Search</a>
 </form>
 </center>
 
@@ -357,6 +391,7 @@ _HIDDEN_
 <input type=hidden name=mode value=_CONTEXT_>
 <input type=text size=40 name=text value='_TEXT-QUOTED_'>
 <input type=submit value='search'><br>
+<a href=_SCRIPT_?_PARAMS_&mode=cbrowse&querymode=advanced&context=csearch_form>Advanced Search</a>
 </form>
 </center>
 
@@ -392,6 +427,7 @@ _PAGES_
 <input type=hidden name=mode value=_CONTEXT_>
 <input type=text size=40 name=text value='_TEXT-QUOTED_'>
 <input type=submit value='search'><br>
+<a href=_SCRIPT_?_PARAMS_&mode=cbrowse&querymode=advanced&context=csearch_form>Advanced Search</a>
 </form>
 </center>
 
@@ -1397,6 +1433,13 @@ sub csearch {
     my($what) = $cgi->param('what');
     my($mode) = $cgi->param('mode') || 'cbrowse';
 
+    if($mode eq 'static') {
+	$mode = 'pathcontext';
+	$ENV{'SCRIPT_NAME'} = $catalog->{'dumplocation'};
+    }
+    
+    my($template) = $self->template('csearch');
+
     my($select_category);
     $select_category = $self->csearch_param2select('categories') if(!defined($what) || $what eq 'categories' || $what eq '');
 #    warn($select_category);
@@ -1404,7 +1447,6 @@ sub csearch {
     $select_records = $self->csearch_param2select('records') if(!defined($what) || $what eq 'records' || $what eq '');
 #    warn($select_records);
 
-    my($template) = $self->template('csearch');
     my($results_count) = 0;
     #
     # Search in categories
@@ -1447,7 +1489,7 @@ sub csearch {
 	    $self->searcher_layout_result($template, $subname, $result, $context);
 	};
 	my(%context) = (
-			'params' => [ 'text', 'what', 'mode' ],
+			'params' => [ 'text', 'what', 'mode', 'querymode' ],
 			'url' => $cgi->script_name(),
 			'page' => scalar($cgi->param('page')),
 			'page_length' => scalar($cgi->param('page_length')),
@@ -1459,7 +1501,13 @@ sub csearch {
 			'sql' => $select_category,
 			);
 
-	$results_count = $self->searcher(\%context);
+	eval {
+	    $results_count = $self->searcher(\%context);
+	};
+	if($@) {
+	    my($error) = $@;
+	    $self->cerror("The query failed, check the syntax");
+	}
 
 	if($results_count <= 0) {
 	    $template_categories->{'skip'} = 1;
@@ -1476,7 +1524,6 @@ sub csearch {
 	    template_set($assoc, '_COUNT_', $results_count);
 	    template_set($assoc, '_TEXT_', $cgi->param('text'));
 	    template_set($assoc, '_TEXT-QUOTED_', Catalog::tools::cgi::myescapeHTML($cgi->param('text')));
-
 	}
     } else {
 	$template_categories->{'skip'} = 1;
@@ -1534,7 +1581,7 @@ sub csearch {
 	    $self->searcher_layout_result($template, $subname, $result, $context);
 	};
 	my(%context) = (
-			'params' => [ 'text', 'what', 'mode' ],
+			'params' => [ 'text', 'what', 'mode', 'querymode' ],
 			'url' => $cgi->script_name(),
 			'page' => scalar($cgi->param('page')),
 			'page_length' => scalar($cgi->param('page_length')),
@@ -1546,7 +1593,13 @@ sub csearch {
 			'sql' => $select_records,
 			);
 
-	$results_count = $self->searcher(\%context);
+	eval {
+	    $results_count = $self->searcher(\%context);
+	};
+	if($@) {
+	    my($error) = $@;
+	    $self->cerror("The query failed, check the syntax");
+	}
 
 	if($results_count <= 0) {
 	    $template_records->{'skip'} = 1;
@@ -1563,24 +1616,85 @@ sub csearch {
 	$template_norecords->{'skip'} = 1;
     }
 
+    $self->csearch_fill_form($cgi, $template, $results_count);
+
     my($assoc) = $template->{'assoc'};
-    template_set($assoc, '_HIDDEN_',
-		 $self->hidden('mode' => scalar($cgi->param('mode')),
-			       'boolean' => scalar($cgi->param('boolean')),
-			       )),
+    template_set($assoc, '_COUNT_', $results_count);
+    template_set($assoc, '_TEXT_', $cgi->param('text'));
+    template_set($assoc, '_TEXT-QUOTED_', Catalog::tools::cgi::myescapeHTML($cgi->param('text')));
+
+    return $self->stemplate_build($template);
+}
+
+sub csearch_form {
+    my($self, $cgi) = @_;
+    $self->{'cgi'} = $cgi;
+    my($ccatalog) = $self->cinfo();
+
+    my($name) = $cgi->param('name');
+    my($catalog) = $ccatalog->{$name};
+    my($navigation) = $catalog->{'navigation'};
+
+    $self->cerror("%s catalog cannot be searched", $navigation) if($navigation ne 'theme');
+
+    my($template) = $self->template('csearch');
+
+    $template->{'children'}->{'records'}->{'skip'} = 1;
+    $template->{'children'}->{'norecords'}->{'skip'} = 1;
+    $template->{'children'}->{'categories'}->{'skip'} = 1;
+    $template->{'children'}->{'nocategories'}->{'skip'} = 1;
+
+    $self->csearch_fill_form($cgi, $template, 0);
+
+    return $self->stemplate_build($template);
+}
+
+sub csearch_fill_form {
+    my($self, $cgi, $template, $results_count) = @_;
+
+    my($what) = $cgi->param('what');
+
     my($what_menu) = $cgi->popup_menu(-name => 'what',
 				      -values => ['', 'categories', 'records'],
 				      -default => '',
 				      -labels => {
-					  '' => 'All',
-					  'categories' => 'Categories',
-					  'records' => 'Records',
+					  '' => 'Category Names and Records',
+					  'categories' => 'Category Names only',
+					  'records' => 'Records only',
 				      });
+    my($querymode_menu) = $cgi->popup_menu(-name => 'querymode',
+					   -values => ['simple', 'advanced'],
+					   -default => 'simple',
+					   -labels => {
+					       'simple' => 'Simple Syntax',
+					       'advanced' => 'Advanced Syntax',
+					   });
+    my($querymode) = $cgi->param('querymode') || 'simple';
+    my($notquerymode) = $querymode eq 'simple' ? 'advanced' : 'simple';
+    my(%has_template) = (
+			 'simple' => exists($template->{'children'}->{'simple'}),
+			 'advanced' => exists($template->{'children'}->{'advanced'})
+			 );
+    my($template_form) = $has_template{$querymode} ? $template->{'children'}->{$querymode} : $template;
+    $template->{'children'}->{$notquerymode}->{'skip'} = 1 if($has_template{$notquerymode});
+
+    my($url) = $cgi->script_name();
+    
+    my($assoc) = $template_form->{'assoc'};
+    template_set($assoc, '_HIDDEN_',
+		 $self->hidden('mode' => scalar($cgi->param('mode')),
+			       'context' => 'csearch'));
+    template_set($assoc, '_PARAMS_',
+		 $self->params('mode' => scalar($cgi->param('mode')),
+			       'context' => undef));
+    template_set($assoc, '_SCRIPT_', $url);
+    template_set($assoc, '_WHAT_', $what);
     template_set($assoc, '_WHAT-MENU_', $what_menu);
+    template_set($assoc, '_QUERYMODE_', $querymode);
+    template_set($assoc, '_QUERYMODE-MENU_', $querymode_menu);
     template_set($assoc, '_COUNT_', $results_count);
     template_set($assoc, '_TEXT_', $cgi->param('text'));
     template_set($assoc, '_TEXT-QUOTED_', Catalog::tools::cgi::myescapeHTML($cgi->param('text')));
-    return $self->stemplate_build($template);
 }
 
 #
@@ -1590,23 +1704,17 @@ sub csearch_param2select {
     my($self, $what) = @_;
     my($cgi) = $self->{'cgi'};
     my($name) = $cgi->param('name');
-    my($boolean) = $cgi->param('boolean') || 'or';
     my($words) = $cgi->param('text');
+    my($querymode) = $cgi->param('querymode');
     #
     # No search if nothing specified
     #
     return undef if(!defined($words) && $words =~ /^\s*$/o);
 
-    my(@words) = $self->string2words($cgi->param('text'));
-    #
-    # No search if no words found
-    #
-    return undef if(!@words);
-
     if($what eq 'categories') {
-	return $self->csearch_param2select_categories($name, $boolean, $words, @words);
+	return $self->csearch_param2select_categories($name, $words, $querymode);
     } else {
-	return $self->csearch_param2select_records($name, $boolean, $words, @words);
+	return $self->csearch_param2select_records($name, $words, $querymode);
     }
 }
 
@@ -1614,7 +1722,7 @@ sub csearch_param2select {
 # HTML translate cgi parameters to select order for searching records
 #
 sub csearch_param2select_records {
-    my($self, $name, $boolean, $words, @words) = @_;
+    my($self, $name, $words, $querymode) = @_;
 
     my($catalog) = $self->cinfo()->{$name};
     my($table) = $catalog->{'tablename'};
@@ -1622,16 +1730,18 @@ sub csearch_param2select_records {
     my($primary_key) = $table_info->{'_primary_'};
     my($spec) = $self->{'search'}->{$name};
 
-    my(@fields);
+    my($fields);
     if(defined($spec) && exists($spec->{'searched'})) {
-	@fields = split(',', $spec->{'searched'});
-	$self->cerror("no searched fields specified in catalog.conf") if(!@fields);
+	$fields = $spec->{'searched'};
+	$self->cerror("no searched fields specified in catalog.conf") if(!$fields);
     } else {
+	my(@fields);
 	my($field, $info);
 	while(($field, $info) = each(%$table_info)) {
 	    push(@fields, $field) if(ref($info) eq 'HASH' && $info->{'type'} eq 'char');
 	}
 	$self->cerror("no char fields in $table") if(!@fields);
+	$fields = join(',', @fields);
     }
 
     my($fields_extracted) = '';
@@ -1642,53 +1752,43 @@ sub csearch_param2select_records {
     }
     $self->cerror("no extracted fields for $table") if($fields_extracted =~ /^\s*$/);
 
-    my($where) = '';
-    my($field);
-    foreach $field (@fields) {
-	my($word);
-	foreach $word (@words) {
-	    if(exists($self->{'encoding'}) &&
-	       $self->{'encoding'} =~ /^big5$/io) {
-		$where .= "$field like '%$word%' $boolean ";
-	    } else {
-		
-		$where .= "$field regexp '[[:<:]]" . $word . "[[:>:]]' $boolean ";
-	    }
-	}
-    }
-    $where =~ s/ $boolean $//;
-
     my($order) = '';
     if(defined($spec) && exists($spec->{'order'})) {
 	$order = ", $spec->{'order'}";
     }
 
-    my($select) = "select $fields_extracted,c.pathname,c.path,c.id from $table, catalog_entry2category_$name as b, catalog_path_$name as c where ( $where ) and $table.$primary_key = b.row and b.category = c.id order by c.pathname asc $order";
+    my($select) = "select $fields_extracted,c.pathname,c.path,c.id from $table, catalog_entry2category_$name as b, catalog_path_$name as c where __WHERE__ and $table.$primary_key = b.row and b.category = c.id order by c.pathname asc $order";
 
-    return $select;
+    my($result);
+    eval {
+	( $result ) = $self->csearch_parse($words, $querymode, $fields, $select);
+    };
+    if($@) {
+	warn("$@");
+	$self->cerror("The syntax of the <b>$words</b> query is incorrect");
+    }
+
+    return $result;
 }
 
 #
 # HTML translate cgi parameters to select order for searching categories
 #
 sub csearch_param2select_categories {
-    my($self, $name, $boolean, $words, @words) = @_;
+    my($self, $name, $words, $querymode) = @_;
 
-    my($where) = '';
+    my($select) = "select a.rowid,a.name,a.info,b.path,b.pathname from catalog_category_$name as a,catalog_path_$name as b where a.rowid = b.id and __WHERE__ ";
 
-    my($word);
-    foreach $word (@words) {
-	if(exists($self->{'encoding'}) && $self->{'encoding'} =~ /^big5$/io) {
-	    $where .= "name like '%$word%' $boolean ";
-	} else {
-	    $where .= "name regexp '[[:<:]]" . $word . "[[:>:]]' $boolean ";
-	}
+    my($result);
+    eval {
+	( $result ) = $self->csearch_parse($words, $querymode, 'a.name', $select);
+    };
+    if($@) {
+	warn("$@");
+	$self->cerror("The syntax of the <b>$words</b> query is incorrect");
     }
-    $where =~ s/ $boolean $//;
 
-    my($select) = "select a.rowid,a.name,a.info,b.path,b.pathname from catalog_category_$name as a,catalog_path_$name as b where a.rowid = b.id and ( $where ) ";
-
-    return $select;
+    return $result;
 }
 
 #
@@ -1739,6 +1839,10 @@ sub cdump_confirm {
 	delete($ENV{'SCRIPT_NAME'});
     }
 
+    $self->db()->update("catalog", "name = '$name'",
+			'dump' => $path,
+			'dumplocation' => $location);
+
     return $self->ccontrol_panel(Catalog::tools::cgi->new({
 	'context' => 'ccontrol_panel',
 	'comment' => 'The catalog has been dumped'
@@ -1773,7 +1877,9 @@ sub cedit_1 {
     $self->cerror("A %s catalog cannot be edited", $navigation) if($navigation ne 'theme');
     $self->pathcheck($name);
     my($opath) = $self->cgi2path();
-    my($id) = $opath->id();
+    my($id);
+    eval { $id = $opath->id(); };
+    $self->cerror("The category path was not found") if(!defined($id));
 
     my($category) = $self->db()->exec_select_one("select * from catalog_category_$name where rowid = $id");
 
@@ -1803,6 +1909,8 @@ sub cedit_1 {
     #
     template_set($assoc, '_HIDDEN_', $self->hidden('path' => undef,
 						   'context' => undef));
+    template_set($assoc, '_PARAMS_', $self->params('path' => undef,
+						   'context' => undef));
     #
     # Category name
     #
@@ -1814,7 +1922,9 @@ sub cedit_1 {
     #
     # Context
     #
-    template_set($assoc, '_CONTEXT_', $opath->fashion() eq 'intuitive' ? 'pathcontext' : $cgi->param('context'));
+    template_set($assoc, '_CONTEXT_',
+	$opath->fashion() eq 'intuitive' ? 'pathcontext' : $cgi->param('context'));
+
     if($info->{'mode'} eq 'cedit') {
 	template_set($assoc, '_CONTROLPANEL_', $self->ccall('context' => 'ccontrol_panel',
 							    'id' => undef,
@@ -1888,8 +1998,13 @@ sub category_searcher {
        $catalog->{'info'} =~ /hideempty/ && $info->{'mode'} ne 'cedit') {
 	$where = " and a.count > 0 ";
     }
-    my($sql) = "select a.rowid,a.name,a.count,b.info,c.pathname from $category as a, $category2category as b, catalog_path_$name as c where a.rowid = b.down and b.down = c.id and b.up = $id $where order by a.name";
-#    warn("sql: $sql");
+    my($sql) = qq{
+	select a.rowid, a.name, a.count, b.info, c.pathname
+	from $category as a, $category2category as b, catalog_path_$name as c
+	where a.rowid = b.down and b.down = c.id and b.up = $id
+		$where
+	order by a.name
+    };
     my($layout) = sub {
 	my($template, $name, $result, $context) = @_;
 
@@ -2000,7 +2115,7 @@ sub searcher_links {
 	my($id) = $cgi->param('id');
 	my($issymlink);
 	my(@symlink);
-	if($row->{'info'} =~ /\bsymlink\b/) {
+	if($row->{'info'} && $row->{'info'} =~ /\bsymlink\b/) {
 	    $issymlink = 1;
 	    @symlink = (
 			'symlink' => 'yes',
@@ -2591,20 +2706,27 @@ sub cgi2path {
     my($catalog) = $self->cinfo()->{$name};
     my($root) = $catalog->{'root'};
 
-    return Catalog::path->new(
-			      'db' => $self->db(),
-			      'root' => $root,
-			      'name' => $name,
-			      'url' => $url,
-			      'id' => $id,
-			      'path' => $path,
-			      'pathname' => $pathname,
-			      'fashion' => $fashion,
-			      'path_root_label' => $self->{'path_root_label'},
-			      'path_separator' => $self->{'path_separator'},
-			      'path_constant' => $self->{'path_constant'},
-			      'path_last_link' => $self->{'path_last_link'},
-			      );
+    my($path_obj);
+
+    eval {
+	$path_obj = Catalog::path->new(
+				       'db' => $self->db(),
+				       'root' => $root,
+				       'name' => $name,
+				       'url' => $url,
+				       'id' => $id,
+				       'path' => $path,
+				       'pathname' => $pathname,
+				       'fashion' => $fashion,
+				       'path_root_label' => $self->{'path_root_label'},
+				       'path_separator' => $self->{'path_separator'},
+				       'path_constant' => $self->{'path_constant'},
+				       'path_last_link' => $self->{'path_last_link'},
+				       );
+    };
+    $self->cerror("The category path was not found") if(!defined($path_obj));
+
+    return $path_obj;
 }
 
 #

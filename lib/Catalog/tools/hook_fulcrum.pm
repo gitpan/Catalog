@@ -16,7 +16,7 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
-package Ecila::tools::hook_fulcrum;
+package Catalog::tools::hook_fulcrum;
 use vars qw(@ISA $MAXCHAR $MAXFIELD);
 use strict;
 
@@ -29,16 +29,16 @@ $MAXCHAR = 32767;
 #
 $MAXFIELD = 18;
 
-use Ecila::tools::fulcrum;
-use Ecila::tools::cgi;
-use Ecila::tools::tools;
+use Catalog::tools::fulcrum;
+use Catalog::tools::cgi;
+use Catalog::tools::tools;
 
-@ISA = qw(Ecila::tools::fulcrum);
+@ISA = qw(Catalog::tools::fulcrum);
 
 sub initialize {
     my($self) = @_;
 
-    $self->Ecila::tools::fulcrum::initialize();
+    $self->Catalog::tools::fulcrum::initialize();
 
     my($config) = config_load("hook_fulcrum.conf");
     error("missing hook_fulcrum.conf") if(!defined($config));
@@ -348,7 +348,7 @@ sub now {
     my($self) = @_;
     my($mysql) = $self->{'mysql'};
 
-    return "DATE '" . $mysql->Ecila::db::date(time()) . "'";
+    return "DATE '" . $mysql->Catalog::db::date(time()) . "'";
 }
 
 sub query2sql {

@@ -35,7 +35,8 @@ create table dmozrecords (
   info enum ('active', 'inactive') default 'active',
   url char(255),
   title char(255),
-  description char(255),
+  description text,
+  priority tinyint,
 
   unique dmozrecord1 (rowid)
 )
@@ -62,6 +63,8 @@ sub main {
 	return;
     }
 
+    $| = 1;
+
     open(TO, ">$to") or error("cannot open $to for writing : $!");
 
     print TO <<'EOF';
@@ -69,24 +72,27 @@ sub main {
 <RDF xmlns:rdf="http://www.w3.org/TR/1999/REC-rdf-syntax-19990222#"
      xmlns="http://www.ecila.fr/">
 EOF
+    my($count) = 0;
+    my($threshold) = 1000;
     if($content) {
 	print TO $create;
-	open(FROM, "<$content") or error("cannot open $content for reading : $!");
-	my($buffer) = '';
+	$content = "gzip -dc '$content' |" if $content =~ /\.gz/;
+	open(FROM, "$content") or error("cannot open $content for reading : $!");
+	my @buffer;
 	my($accumulate);
 	while(<FROM>) {
 	    if(/^<Topic/) {
 		if($accumulate) {
-		    handle_content($buffer);
-		    $buffer = '';
+		    handle_content( join "", @buffer );
+		    @buffer = ();
 		}
 		$accumulate = 1;
 	    }
-	    $buffer .= $_ if($accumulate);
-	    print " " if($cgi);
+	    push @buffer, $_ if $accumulate;
+	    print " " if($cgi && ++$count % $threshold == 0);
 	}
 
-	handle_content($buffer);
+	handle_content( join "", @buffer );
 	close(FROM);
 	#
 	# Trigger computation of additional administrative data.
@@ -95,22 +101,23 @@ EOF
 	print TO " <Sync/>\n";
     }
     if($structure) {
-	open(FROM, "<$structure") or error("cannot open $structure for reading : $!");
-	my($buffer) = '';
+	$structure = "gzip -dc '$structure' |" if $structure =~ /\.gz/;
+	open(FROM, "$structure") or error("cannot open $structure for reading : $!");
+	my @buffer;
 	my($accumulate);
 	while(<FROM>) {
 	    if(/^<Topic/) {
 		if($accumulate) {
-		    handle_structure($buffer);
-		    $buffer = '';
+		    handle_structure( join "", @buffer );
+		    @buffer = ();
 		}
 		$accumulate = 1;
 	    }
-	    $buffer .= $_ if($accumulate);
-	    print " " if($cgi);
+	    push @buffer, $_ if $accumulate;
+	    print " " if($cgi && ++$count % $threshold == 0);
 	}
 
-	handle_structure($buffer);
+	handle_structure( join "", @buffer );
 	close(FROM);
     }
 

@@ -17,7 +17,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/tools/main.pm,v 1.8 1999/04/30 17:17:39 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/tools/main.pm,v 1.9 1999/05/31 18:48:28 loic Exp $
 #
 # 
 #
@@ -38,10 +38,10 @@
 #     arguments so that they can be given in argument to another command.
 #   
 #
-package Ecila::tools::main;
+package Catalog::tools::main;
 use strict;
 
-use Ecila::tools::tools;
+use Catalog::tools::tools;
 use Getopt::Long;
 use File::Basename;
 

@@ -5,9 +5,9 @@
 @setchapternewpage odd
 @c %**end of header
 
-@set RCSID $Id: catalog.texinfo,v 1.24 1999/05/18 18:51:04 loic Exp $
-@set VERSION 0.10
-@set UPDATED May 1999
+@set RCSID $Id: catalog.texinfo,v 1.33 1999/07/03 09:53:32 loic Exp $
+@set VERSION 1.00
+@set UPDATED July 1999
 @set PERL perl5.005_02
 @set MySQL MySQL-3.22.19a-gamma
 
@@ -140,6 +140,7 @@ Template files introduction
 
 * Templates switch table::      Templates switch table
 * Fixed tags::                  Fixed tags
+* Fixed params::                
 * Database table tags::         database table tags
 * Record list part::            Record list part
 * Multipage results template::  Multipage results template
@@ -3807,9 +3808,6 @@ Load the content.rdf.gz and structure.rdf.gz from http://dmoz.org/rdf.html
 and make sure they are in the same directory. 
 
 @item
-Uncompress content.rdf.gz and structure.rdf.gz. 
-
-@item
 Display the control panel using the @strong{dmoz} cgi script instead of
 @strong{Catalog} : 
 
@@ -3825,7 +3823,7 @@ like the figure below.
 
 @item
 Enter the fully qualified path name of the directory containing the
-content.rdf and structure.rdf files in the input box.
+content.rdf.gz and structure.rdf.gz files in the input box.
 
 @item
 Click on the @strong{'Convert it!'} button and wait for completion.
@@ -3845,10 +3843,10 @@ Alternatively you may want to do it using the command line only.
 @itemize @bullet
 
 @item
-Convert content.rdf and structure.rdf into dmoz.rdf.
+Convert content.rdf.gz and structure.rdf.gz into dmoz.rdf.
 
 @example
-convert_dmoz content.rdf structure.rdf dmoz.rdf
+convert_dmoz content.rdf.gz structure.rdf.gz dmoz.rdf
 @end example
 
 @item
@@ -3962,6 +3960,7 @@ on the action associated to the template.
 @menu
 * Templates switch table::      Templates switch table
 * Fixed tags::                  Fixed tags
+* Fixed params::                
 * Database table tags::         database table tags
 * Record list part::            Record list part
 * Multipage results template::  Multipage results template
@@ -3982,7 +3981,7 @@ listed in this chapter to other file names, @xref{Template configuration file, ,
 The choice of a specific name map depend on the @strong{style} 
 parameter, @xref{Style parameter, ,@code{Style parameter}}.
 
-@node Fixed tags, Database table tags, Templates switch table, Template files introduction
+@node Fixed tags, Fixed params, Templates switch table, Template files introduction
 @section Fixed tags
 
 @cindex tags always available
@@ -4006,7 +4005,86 @@ subdirectory (/Catalog/images for instance).
 
 @end table
 
-@node Database table tags, Record list part, Fixed tags, Template files introduction
+@node Fixed params, Database table tags, Fixed tags, Template files introduction
+@section Fixed params
+
+@cindex params always available
+@cindex fixed params
+
+The following params are always available in any template or a template part.
+
+@table @samp
+
+@cindex pre_fill
+@item pre_fill
+Name of, or reference to, a function to call before filling in the corresponding
+part of a template. The function can return a reference to a modified
+deep-copy of the template hash.
+
+@cindex post_fill
+@item post_fill
+Name of, or reference to, a function to call after filling in the corresponding
+part of a template. The function can return a modified copy of the expanded HTML.
+
+@end table
+
+Here's an example:
+
+@example
+	<!-- start entry -->
+	<!-- params pre_fill => \&MyCat::pre_fill_entry, post_fill => \&MyCat::post_fill_entry -->
+	<LI><a href='_URL-QUOTED_'>_URL_</a> &nbsp;- _DESCRIPTION_ <!-- _COUNT_ -->
+	<!-- end entry -->
+@end example
+
+The MyCat::pre_fill_entry will be called with two parameters: a
+reference to the template hash and a reference to an array of 'parent'
+templates, which may be empty. The function must at least return the
+template hash reference. Note that you should always modify a deep-copy
+of the template and not the original because changes to the original
+will be permenant within mod_perl.
+
+The MyCat::post_fill_entry will be called with three parameters: the
+first two are the same as for pre_fill_entry. The third is the
+generated HTML.  The function must return an HTML string. Here's an
+example that adds an arrow gif for symbolic links:
+
+@example
+    package MyCat;
+    use Catalog;
+    @@ISA = qw(Catalog);
+
+    MyCatalog->selector();
+
+    sub post_fill_entry @{
+	my ($template, $parents, $html) = @@_;
+	return $html if @@$parents > 0; # needed for mysterious reasons
+	my $a = $T->@{assoc@};
+	if ($a->@{_COUNT_@} && $a->@{_COUNT_@} eq "@@") @{
+	    $html .= q@{<IMG SRC="_SCRIPT_/../images/arrow.gif" ALT="-&gt;" WIDTH="19" HEIGHT="8">@};
+	@}
+	return $html;
+    @}
+@end example
+
+Note that in order for _COUNT_ to be in the $template->@{assoc@} hash, it
+must appear within the template. If you don't want _COUNT_ to appear in
+the output then put it inside an HTML comment, as shown above.
+
+At the moment there is no direct way for the functions to access the
+current Catalog CGI object. You could replace the C<selector()> call
+in the example above with calls to:
+
+@example
+    my $self = MyCat->new();
+    $self->selector();
+    $self->close();
+    undef $self;
+@end example
+
+The pre_fill and post_fill functions could then refer to $self.
+
+@node Database table tags, Record list part, Fixed params, Template files introduction
 @section Database table tags
 
 Most templates display fields from tables and they all follow the same
@@ -4749,6 +4827,11 @@ The result is paginated, @xref{Multipage results template,,@code{Multipage resul
 @item _COMMENT_
 A report from the action that displayed the template.
 
+@cindex _PARAMS_
+@item _PARAMS_
+List of current parameters, except @strong{context}. Suitable for inclusion
+in a href.
+
 @cindex _PATH_
 @item _PATH_
 Full path of the current category, as built by the navigation of the user,
@@ -4968,14 +5051,41 @@ Here is an example template:
 @example
 <title>Search results for _TEXT_</title>
 
+<!-- start simple -->
 <center>
 <form action=_SCRIPT_ method=POST>
 _HIDDEN_
 <input type=text size=40 name=text value='_TEXT-QUOTED_'>
 <input type=submit value='search'><br>
 _WHAT-MENU_
+<a href=_SCRIPT_?context=csearch_form&querymode=advanced&_PARAMS_>Advanced Search</a>
+<br>
+Example: <b>+catalog senga -query</b>
 </form>
 </center>
+<!-- end simple -->
+
+<!-- start advanced -->
+<form action=_SCRIPT_ method=POST>
+_HIDDEN_
+<textarea name=text cols=50 rows=6>_TEXT-QUOTED_</textarea>
+<br>
+_WHAT-MENU_
+_QUERYMODE-MENU_
+<input type=submit value='search'>
+<br>
+Advanced search syntax examples:
+<dl>
+<dt> Boolean operators
+<dd> <b>catalog and senga and not query or freeware near software</b>
+<dt> Precedence
+<dd> <b>catalog and ( query or freeware )</b>
+<dt> Fields
+<dd> <b>comment: ( catalog and query ) or url: edu</b>
+</dl>
+</form>
+<!-- end advanced -->
+
 <!-- start categories -->
 <center>Categories matching <b>_TEXT_</b> (_COUNT_)</center>
 <ul>
@@ -5020,11 +5130,26 @@ _PAGES_
 <!-- end norecords -->
 @end example
 
+The @strong{simple} and @strong{advanced} parts are not mandatory, for backward
+compatibility. If none of them is present, the query form is assumed to be
+at the top level part of the template.
+
 @table @samp
 
 @item Parts
 
   @table @samp
+  @cindex simple part
+  @item simple
+
+Shown if the @strong{querymode} parameters is set to @code{simple}.
+
+  @cindex advanced part
+  @item advanced
+
+Shown if the @strong{querymode} parameters is set to @code{advanced}.
+
+
   @cindex categories part
   @item categories
 Shown if a match is found in the categories and the @strong{what} parameter is not set or set to
@@ -5132,12 +5257,21 @@ If the @strong{what} parameter is not set, this part is shown if no category is 
   @cindex _HIDDEN_
   @item _HIDDEN_
 List of hidden fields necessary to perform a new search. Must
-be included in a @code{form}. It includes the @strong{mode}, @strong{boolean}, @strong{context} and
+be included in a @code{form}. It includes the @strong{mode}, @strong{context} and
 @strong{name} parameters.
+
+  @cindex _PARAMS_
+  @item _PARAMS_
+List of current parameters, except @strong{context}. Suitable for inclusion
+in a href.
 
   @cindex _WHAT-MENU_
   @item _WHAT-MENU_
 A popup menu to select the @strong{what} parameter.
+
+  @cindex _QUERYMODE-MENU_
+  @item _QUERYMODE-MENU_
+A popup menu to select the @strong{querymode} parameter.
 
   @end table
 
@@ -7205,11 +7339,9 @@ matches the search criterion, the records are searched with the same criterion.
 A new search form is shown on top of the search results, giving the opportunity to the user to change the
 search criterion or to search in the records instead of the categories. 
 
-The search criterion specified in the @strong{text} parameter is split in a list of words (alphanumerical
-sequence of character, including the dash (@strong{-})). The words are searched using the boolean operator
-specified with the @strong{boolean} parameter. By default the boolean operator used is @strong{or} and 
-any occurrence of a word is a hit. If the boolean operator is set to @strong{and}, the search only hits
-if all the words are found, the order in which they appear is not relevant.
+The search criterion specified in the @strong{text} parameter is parsed using
+the same rules than @code{AltaVista} simple search. If the @strong{querymode} parameter is set
+to @code{advanced}, the @code{AltaVista} advanced search syntax is used instead.
 
 When searching the categories, the search is done on the @strong{name} field, @xref{catalog,,@code{catalog}}.
 The ordering of the categories is ascending alphabetical.
@@ -7232,7 +7364,7 @@ in the same category are displayed together. Optional additional order criterion
 @cindex parameter, text
 @cindex parameter, what
 @cindex parameter, mode
-@cindex parameter, boolean
+@cindex parameter, querymode
 
 @table @samp
 
@@ -7252,11 +7384,19 @@ the categories will be searched first and, if no category matches, the records
 will be searched.
 
 @item mode (optional, default @strong{cbrowse})
-Specifies the context in which the search is made. It can be either @strong{cbrowse}, @strong{cedit} or
-@strong{pathcontext}. The href links displayed in the result page will use the specified context.
+Specifies the context in which the search is made. It can be either @strong{cbrowse}, @strong{cedit},
+@strong{pathcontext} or @strong{static}. The href links displayed in the result page will use the specified context.
+The @strong{static} context allows to include a search form that uses the static dump of a catalog.
 
-@item boolean (optional, default @strong{or})
-Specifies the boolean operator used to glue search terms. 
+When set to @strong{static}, the @strong{_SCRIPT_} tag will be replaced by the dump location stored in 
+the @strong{dumplocation} field of the record describing the catalog,
+@xref{Dump a thematic catalog (cdump_confirm), ,@code{Dump a thematic catalog (cdump_confirm)}}.
+If you want to include a search form in the results of the search, make sure that the templates
+contains the explicit location of the cgi-bin script to use instead of @strong{_SCRIPT_}.
+
+@item querymode (optional, default @strong{simple})
+Specifies syntax of the search string. If set to @strong{simple}, @code{AltaVista} simple search syntax is used.
+If set to @strong{advanced}, @code{AltaVista} advanced search syntax is used.
 
 @end table
 
@@ -9030,6 +9170,13 @@ first directory that contains the template file wins,
 @chapter Troubleshooting
 
 @table @samp
+
+@cindex Lost connection
+@item I have a 'lost connection' message when running tests.
+
+This problem is apparently transient. You should be able to get rid of it
+by trying again. Please fill a bug report describing the conditions in
+which it occurs at http://www.senga.org/bugzilla/.
 
 @cindex Blank page
 @cindex Very long actions

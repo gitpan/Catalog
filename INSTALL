@@ -1,6 +1,12 @@
-$Id: INSTALL,v 1.26 1999/05/18 18:49:57 loic Exp $
+$Id: INSTALL,v 1.30 1999/07/03 12:07:03 loic Exp $
 
 The Catalog home page is http://www.senga.org/
+
+WARNING: If the Text-Query and Text-Query-SQL perl modules cannot
+be found automatically, get them from 
+http://www.perl.com/CPAN/modules/by-authors/id/E/EB/EBOHLMAN/
+http://www.perl.com/CPAN/modules/by-authors/id/L/LD/LDACHARY/
+respectively.
 
 Quick start (assuming you have installed MySQL and Perl):
 ---------------------------------------------------------
@@ -13,10 +19,11 @@ Quick start (assuming you have installed MySQL and Perl):
 	  #
 	  MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
 	     DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
-             USE_CONFIG='' USE_DEFAULTS=1 HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
+             USE_CONFIG='' HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
              CGIDIR=/home/httpd/cgi-bin CGIPATH=/cgi-bin \
 	     USERID=nobody \
 	     MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
+	     USE_DEFAULTS=1 \
 	     perl -MCPAN -e 'force install Bundle::Catalog'
           #
           # Read the Setup chapter in the documentation. It will 
@@ -47,7 +54,7 @@ Requires:
 	  Catalog with minimal version number. All of them may be found on 
 	  CPAN (http://www.perl.com/CPAN/).
 
-	  DBI 1.02 - Database independent interface for Perl
+	  DBI 1.08 - Database independent interface for Perl
 
 	  DBD::mysql 2.0210 - mysql drivers for the Perl Database Interface (DBI)
 
@@ -59,9 +66,13 @@ Requires:
 
 	  XML::DOM 1.19 - building DOM Level 1 compliant document structures
 
-	  Unicode::String 1.20 - String of Unicode characters
+	  Unicode::String 1.21 - String of Unicode characters
 
-	  Unicode::Map8 0.05 - Mapping table between 8-bit chars and Unicode
+	  Unicode::Map8 0.06 - Mapping table between 8-bit chars and Unicode
+
+	  Text::Query 0.07     - Query parsing and resolver framework
+
+	  Text::Query::BuildSQL 0.05 - Query implementation for SQL databases
 
           An HTTP server (Apache for instance) running on your local machine.
 	  If you want really good performances you must build Apache with
@@ -208,7 +219,7 @@ cd /usr/ports/www/apache13 ; \
 #
 MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
  DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
- USE_CONFIG='' USE_DEFAULTS=1 HTMLDIR=/usr/local/www/data/Catalog HTMLPATH=/Catalog \
+ USE_CONFIG='' HTMLDIR=/usr/local/www/data/Catalog HTMLPATH=/Catalog \
  CGIDIR=/usr/local/www/cgi-bin CGIPATH=/cgi-bin \
  USERID=nobody \
  MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
@@ -273,7 +284,7 @@ rpm -ivh MySQL-devel-3.22.19a-1.i386.rpm
 #
 MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
  DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
- USE_CONFIG='' USE_DEFAULTS=1 HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
+ USE_CONFIG='' HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
  CGIDIR=/home/httpd/cgi-bin CGIPATH=/cgi-bin \
  USERID=nobody \
  MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
@@ -385,7 +396,7 @@ $HOME/local/bin/apachectl start
 #
 MYSQL_HOME=$HOME/local/mysql IN_MYSQL_DISTRIBUTION=1 \
  DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
- USE_CONFIG='' USE_DEFAULTS=1 HTMLDIR=$HOME/local/htdocs/Catalog HTMLPATH=/Catalog \
+ USE_CONFIG='' HTMLDIR=$HOME/local/htdocs/Catalog HTMLPATH=/Catalog \
  CGIDIR=$HOME/local/cgi-bin CGIPATH=/cgi-bin \
  USERID=nobody \
  MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \

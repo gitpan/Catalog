@@ -1,3 +1,23 @@
+#
+#   Copyright (C) 1998, 1999 Loic Dachary
+#
+#   This program is free software; you can redistribute it and/or modify it
+#   under the terms of the GNU General Public License as published by the
+#   Free Software Foundation; either version 2, or (at your option) any
+#   later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software
+#   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+#
+# 
+# $Header: /usr/local/cvsroot/Catalog/conf/Makefile.PL,v 1.11 1999/05/31 18:33:07 loic Exp $
+#
 # This -*- perl -*- script writes the Makefile for Catalog
 
 require 5.005;
@@ -5,7 +25,7 @@ use strict;
 
 require "./lib.pl";
 
-%::var2env = (
+conf_env(
 	      'infodir' => 'INFODIR',
 	      'cgidir' => 'CGIDIR',
 	      'cgipath' => 'CGIPATH',
@@ -14,184 +34,8 @@ require "./lib.pl";
 	      'htmldir' => 'HTMLDIR',
 	      'htmlpath' => 'HTMLPATH',
 	      'userid' => 'USERID',
-	      'home' => 'MYSQL_HOME',
-	      'user' => 'MYSQL_USER',
-	      'passwd' => 'MYSQL_PASSWORD',
-	      'host' => 'MYSQL_HOST',
-	      'base' => 'MYSQL_BASE',
-	      'port' => 'MYSQL_PORT',
-	      'unix_port' => 'MYSQL_UNIX_PORT',
+	      'db_type' => 'DB_TYPE',
 	      );
-$::env2var = map { $::var2env{$_} => $_ } keys(%::var2env);
-
-sub getparam_valid {
-    my($var, $value, $undefp, $silent, $spec) = @_;
-
-    if(!defined($value)) {
-	if($undefp eq 'undef_ok') {
-	    print $spec->{'undef_comment'} if(!$silent);
-	    return 1;
-	} else {
-	    return 0;
-	}
-    }
-    
-    if($value eq '') {
-	if($spec->{'mandatory'}) {
-	    print "this value is mandatory " if(!$silent);
-	    print $spec->{'mandatory_comment'} if(!$silent && exists($spec->{'mandatory_comment'}));
-	    return 0;
-	} else {
-	    return 1;
-	}
-    }
-
-    if($spec->{'absolute'}) {
-	if($value !~ m|^/|o) {
-	    print "$value must be an absolute path name ";
-	    return 0;
-	}
-    }
-
-    if($spec->{'directory'}) {
-	if(! -d $value) {
-	    print "$value is not an existing directory " if(!$silent);
-	    print $spec->{'directory_comment'} if(!$silent && exists($spec->{'directory_comment'}));
-	    return 0;
-	}
-    }
-
-    if($spec->{'postamble'}) {
-	my($func) = $spec->{'postamble'};
-	return 0 unless(&$func($var, $value, $undefp, $silent, $spec));
-    }
-
-    return 1;
-}
-
-sub getparam {
-    my($var, $h, $spec) = @_;
-    my($env) = $::var2env{$var};
-    my($value) = $h->{$var};
-    #
-    # ENV overrides existing value
-    # nothing specified : value = undef
-    # empty string specified : value = ''
-    # string specified : value = string
-    #
-    my($from_env) = 0;
-    if(defined($env) && exists($ENV{$env})) {
-	if($ENV{$env} !~ /^\s*$/o) {
-	    $value = $ENV{$env};
-	} else {
-	    $value = '';
-	}
-	$from_env = 1;
-    } else {
-	if(defined($value)) {
-	    if($value =~ /^\s*$/o) {
-		$value = '';
-	    }
-	} 
-    }
-
-    #
-    # If USE_DEFAULTS, only go to interactive mode if an error is
-    # detected with default parameters.
-    # Otherwise go to interactive mode if value is not set by 
-    # the environment.
-    #
-    my($interactivep);
-    my($undefp);
-    if($ENV{'USE_DEFAULTS'}) {
-	$undefp = 'undef_ok';
-	$interactivep = 0;
-    } else {
-	$undefp = 'undef_notok';
-	$interactivep = !$from_env;
-    }
-
-    #
-    # Go in interactive loop if the value found in the environment 
-    # is not valid or no value was found in the environment.
-    #
-    if(!getparam_valid($var, $value, $undefp, 'silent', $spec) || $interactivep) {
-	print $spec->{'prompt'};
-	my($ok) = 0;
-	do {
-	    print "\n(";
-	    if(defined($value)) {
-		if($value eq '') {
-		    print "default is empty string";
-		} else {
-		    print "default $value";
-		}
-	    } else {
-		print "no default";
-	    }
-	    print ", type '' for empty string) $var : ";
-	    my($tmp);
-	    $tmp = <STDIN>;
-	    chop($tmp);
-	    $tmp =~ s/^\s*(.*?)\s*$/$1/o;
-	    $tmp = undef if($tmp eq "''");
-	    if(defined($tmp) && $tmp eq '') {
-		$ok = getparam_valid($var, $value, 'undef_ok', undef, $spec);
-	    } else {
-		if($ok = getparam_valid($var, $tmp, 'undef_ok', undef, $spec)) {
-		    $value = $tmp;
-		}
-	    }
-	} while(!$ok);
-    }
-
-    $h->{$var} = $value;
-}
-
-sub yesno {
-    my($var, $h, $spec) = @_;
-
-    my($tmp);
-    if($ENV{'USE_DEFAULTS'}) {
-	$tmp = $spec->{'default'} eq 'yes' ? 1 : 0;
-    } else {
-	print $spec->{'prompt'};
-	do {
-	    print " [$spec->{'default'}] : ";
-	    $tmp = <STDIN>;
-	    chop($tmp);
-	    if($tmp =~ /^yes$/i || $tmp =~ /^y$/i) {
-		$tmp = 1;
-	    } elsif($tmp =~ /^no$/i || $tmp =~ /^n$/i) {
-		$tmp = 0;
-	    } elsif($tmp =~ /^\s*$/) {
-		$tmp = $spec->{'default'} eq 'yes' ? 1 : 0;
-	    } else {
-		print "answer yes or no or type return to accept default ";
-		$tmp = undef;
-	    }
-	} while(!defined($tmp));
-    }
-
-    my($yes) = defined($spec->{'value_yes'}) ? $spec->{'value_yes'} : 1;
-    my($no) = defined($spec->{'value_no'}) ? $spec->{'value_no'} : 0;
-    $h->{$var} = $tmp ? $yes : $no;
-}
-
-sub locate_cmds {
-    my($conf, @cmds) = @_;
-
-    my($cmd);
-    foreach $cmd (@cmds) {
-	my($where) = `which $cmd 2>/dev/null`;
-	if($? == 0 && $where !~ /^\s*$/os) {
-	    $where =~ s/\n//gs;
-	    $conf->{$cmd} = $where;
-	} else {
-	    $conf->{$cmd} = undef;
-	}
-    }
-}
 
 sub misc_ask {
     my($install_conf) = load_config("install.conf");
@@ -343,136 +187,32 @@ owner must be the same as the userid of the HTTP server",
     unload_config($install_conf, "install.conf");
 }
 
-sub mysql_ask {
-    my($mysql_conf) = load_config("mysql.conf");
+sub db_ask {
+    my($db_conf) = load_config("db.conf");
 
-    if(!$ENV{'USE_DEFAULTS'}) {
-	print "
-You will now be prompted for the parameters that allow a connection
-to the MySQL database to be established.
-
-";
-    }
-
-    my($ok);
-    do {
-	getparam('home', $mysql_conf,
+    getparam('db_type', $db_conf,
 		 {
-		     'prompt' => "Directory in which MySQL is installed. For instance
-if you have /usr/local/include/mysql then the directory is /usr/local.",
+		     'prompt' => "Specify the database you will be using.",
 		     'mandatory' => 1,
-		     'directory' => 1,
-		     'absolute' => 1,
 		     'postamble' => sub {
 			 my($var, $value, $undefp, $silent, $spec) = @_;
-			 my($include) = "$value/include/mysql";
-			 if(! -d $include) {
-			     print "$include is not a directory " if(!$silent);
+			 if(! -r "$value.pl") {
+			     print "$value is not among the known databases" if(!$silent);
 			     return 0;
 			 }
 			 return 1;
 		     },
 		 });
-	getparam('base', $mysql_conf,
-		 {
-		     'prompt' => "MySQL database where the catalog tables will be created.
-The mysql database is created when you installed MySQL. You can
-use it if you don't want to create your own.",
-		     'mandatory' => 1,
-		 });
-	getparam('user', $mysql_conf,
-		 {
-		     'prompt' => "MySQL user only if not running with --skip-grant-tables",
-		 });
-	getparam('passwd', $mysql_conf,
-		 {
-		     'prompt' => "MySQL password  only if not running with --skip-grant-tables",
-		 });
-	getparam('host', $mysql_conf,
-		 {
-		     'prompt' => "MySQL host if not localhost",
-		 });
-	getparam('port', $mysql_conf,
-		 {
-		     'prompt' => "MySQL port if not default port",
-		 });
-	getparam('unix_port', $mysql_conf,
-		 {
-		     'prompt' => "MySQL socket if not default socket. 
-This is only needed if running more than one MySQL server on the same host.
-If you don't know what this is about, leave it empty.",
-                 });
-	conf2opt($mysql_conf);
-	$ok = dbconnect($mysql_conf);
-	if(!$ok) {
-	    print "
-Please fix the mysql parameters so that a connection can be established.
-";
-	    delete($ENV{'USE_DEFAULTS'});
-	    my($key);
-	    foreach $key (qw(MYSQL_BASE MYSQL_USER MYSQL_PASSWORD MYSQL_HOST MYSQL_BASE MYSQL_PORT)) {
-		delete($ENV{$key});
-	    }
-	}
-    } while(!$ok);
-
-    unload_config($mysql_conf, "mysql.conf");
-}
-
-my($ok) = 0;
-my($user, $passwd);
-
-sub dbconnect {
-    my($mysql_conf) = @_;
-
-    my($opt) = $mysql_conf->{'cmd_opt'};
     
-    my($cmd) = "mysql $opt -e \"show tables\" mysql";
-    system("echo 'Trying to connect with: $cmd'");
-    system("echo '------- Test output begin -----------'");
-    my($unset) = "unset MYSQL_BASE ; unset MYSQL_USER ; unset MYSQL_PASSWORD ; unset MYSQL_HOST ; unset MYSQL_BASE ; unset MYSQL_PORT ; unset MYSQL_UNIX_PORT";
-    system("$unset ; $cmd");
-    my($status) = !$?;
-    system("echo '------- Test output end   -----------'");
-    return $status;
+    require "./$db_conf->{'db_type'}.pl";
+
+    search_conf("$db_conf->{'db_type'}.conf");
+    db_real_ask();
+
+    unload_config($db_conf, "db.conf");
 }
 
-#
-# Reuse an existing configuration
-#
-sub search_conf {
-    my(%conf);
-
-    getparam('use_config', \%conf,
-	     {
-		 'prompt' => "
-Shall I take default configuration values from an existing configuration ? If yes specify the
-directory. If no just type return and we will proceed with questions.
-",
-                 'directory' => 1,
-                 'absolute' => 1,
-		 'postamble' => sub {
-		     my($var, $value, $undefp, $silent, $spec) = @_;
-
-		     if(! -f "$value/mysql.conf" || ! -f "$value/install.conf") {
-			 print "$value directory must contain mysql.conf and install.conf " if(!$silent);
-			 return 0;
-		     }
-		     return 1;
-		 },
-    });
-
-    if(-d "$conf{'use_config'}") {
-	my($file);
-	foreach $file (qw(install.conf mysql.conf)) {
-	    system("cp $file $file.orig") if(! -f "$file.orig");
-	    system("cp $conf{'use_config'}/$file $file");
-	}
-	$ENV{'USE_DEFAULTS'} = 1;
-    }
-}
-
-search_conf();
+search_conf(qw(install.conf db.conf));
 install_ask();
 misc_ask();
-mysql_ask();
+db_ask();

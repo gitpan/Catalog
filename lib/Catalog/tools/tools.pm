@@ -17,10 +17,10 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/tools/tools.pm,v 1.15 1999/04/20 08:11:38 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/tools/tools.pm,v 1.17 1999/06/09 07:18:39 loic Exp $
 #
 # 
-package Ecila::tools::tools;
+package Catalog::tools::tools;
 use strict;
 use vars qw(@ISA @EXPORT);
 
@@ -76,7 +76,7 @@ sub error {
 sub messages_load {
     my($base) = @_;
 
-    if(!defined($Ecila::tools::tools::messages{$base})) {
+    if(!defined($Catalog::tools::tools::messages{$base})) {
 	my($file) = locate_file($base, $ENV{'CONFIG_DIR'});
 	if(!defined($file)) {
 	    dbg("no messages file found in path " . ($ENV{'CONFIG_DIR'} || '') . " for $base", "message");
@@ -85,12 +85,12 @@ sub messages_load {
 	    open(FILE, "<$file") or croak("cannot open $file for reading : $!");
 	    messages_load_parse(\%messages);
 	    close(FILE);
-	    $Ecila::tools::tools::messages{$base} = \%messages;
+	    $Catalog::tools::tools::messages{$base} = \%messages;
 	}
     }
 
-    dbg("$base " . ostring($Ecila::tools::tools::messages{$base}), "messages");
-    return $Ecila::tools::tools::messages{$base};
+    dbg("$base " . ostring($Catalog::tools::tools::messages{$base}), "messages");
+    return $Catalog::tools::tools::messages{$base};
 }
 
 sub messages_load_parse {
@@ -186,14 +186,14 @@ sub config_load {
     $file = getcwd() . "/$file" if(defined($file) && $file !~ /^\//);
     if(!defined($file)) {
 	dbg("no config file found in path " . ($ENV{'CONFIG_DIR'} || '') . " for $base", "config");
-    } elsif(!defined($Ecila::tools::tools::config{$file})) {
+    } elsif(!defined($Catalog::tools::tools::config{$file})) {
 	my(%config);
 	open(FILE, "<$file") or croak("cannot open $file for reading : $!");
 	config_load_parse(\%config);
 	close(FILE);
-	$Ecila::tools::tools::config{$file} = \%config;
+	$Catalog::tools::tools::config{$file} = \%config;
     }
-    return defined($file) ? $Ecila::tools::tools::config{$file} : undef;
+    return defined($file) ? $Catalog::tools::tools::config{$file} : undef;
 }
 
 sub config_load_parse {
@@ -251,7 +251,7 @@ sub template_set {
 }
 
 sub template_parse {
-    my($file, $content) = @_;
+    my($file, $content, $name) = @_;
 
     #
     # Extract subtemplates if any
@@ -259,16 +259,16 @@ sub template_parse {
     my($start) = '<\!--\s*start\s+(\w+)\s*-->';
     my(%children);
     while($content =~ /$start/io) {
-	my($name) = $1;
+	my($subname) = $1;
 	my($rest) = $';
-	my($end) = '<\!--\s*end\s+' . $name . '\s*-->';
+	my($end) = '<\!--\s*end\s+' . $subname . '\s*-->';
 	if($rest !~ /$end/i) {
-	    croak("template $file: missing end for $name");
+	    croak("template $file: missing end for $subname");
 	}
 	my($sub_content) = $`;
-	$children{$name} = template_parse($file, $sub_content);
-	my($all) = '<\!--\s*start\s+' . $name . '\s*-->.*'. $end;
-	my($tag) = '_SUBTEMPLATE' . $name . '_';
+	$children{$subname} = template_parse($file, $sub_content, $subname);
+	my($all) = '<\!--\s*start\s+' . $subname . '\s*-->.*?'. $end;
+	my($tag) = '_SUBTEMPLATE' . $subname . '_';
 	$content =~ s/$all/$tag/s;
     }
 
@@ -278,8 +278,8 @@ sub template_parse {
     my(%params);
     my($params_re) = '<\!--\s*params\s+(.*?)\s*-->';
     if($content =~ /$params_re/io) {
-	eval "\%params = ( $1 )";
-	croak() if($@);
+	eval "package; \%params = ( $1 )";
+	croak $@ if $@;	# or just warn? what's the policy?
     }
     
     #
@@ -297,6 +297,8 @@ sub template_parse {
 	'assoc' => \%assoc,
 	'children' => \%children,
 	'params' => \%params,
+	'filename' => $file,
+	'name' => $name || 'whole',
     };
 }
 
@@ -336,25 +338,39 @@ sub template_build {
 }
 
 sub template_fill {
-    my($template) = @_;
+    my($template, $parents) = @_;
 
     return "" if($template->{'skip'});
 
-    my($children) = $template->{'children'};
-    my($assoc) = $template->{'assoc'};
-    my($html) = $template->{'html'} ? $template->{'html'} : $template->{'content'};
+    if ($template->{params}->{pre_fill}) {
+	my $sub = $template->{params}->{pre_fill};
+	$template = eval { package ; &$sub($template, $parents||[]) };
+	croak $@ if $@;	# or just warn? what's the policy?
+	return "" if $template->{skip};
+    }
 
-    my($name);
-    foreach $name (keys(%$children)) {
+    my($children) = $template->{'children'};
+    my($assoc)    = $template->{'assoc'};
+    my($html)     = defined($template->{'html'})
+			? $template->{'html'}
+			: $template->{'content'};
+
+    while (my ($name,$value) = each %$children) {
 	my($tag) = '_SUBTEMPLATE' . $name . '_';
-	my($sub_html) = template_fill($children->{$name});
+	push @{ $parents ||= [] }, $template;
+	my($sub_html) = template_fill($value, $parents);
 	$html =~ s/$tag/$sub_html/g;
     }
 
-    my($key);
-    foreach $key (keys(%$assoc)) {
-	my($value) = $assoc->{$key} || '';
+    while (my ($key,$value) = each %$assoc) {
+	$value = '' unless defined $value;
 	$html =~ s/$key/$value/g;
+    }
+
+    if ($template->{params}->{post_fill}) {
+	my $sub = $template->{params}->{post_fill};
+	$html = eval { &$sub($template, $parents||[], $html) };
+	croak $@ if $@;	# or just warn? what's the policy?
     }
 
     return $html;
@@ -369,14 +385,12 @@ sub template_clean {
     delete($template->{'html'});
 
     my($children) = $template->{'children'};
-    my($name);
-    foreach $name (keys(%$children)) {
-	template_clean($children->{$name});
+    foreach my $child (values %$children) {
+	template_clean($child);
     }
 
     my($assoc) = $template->{'assoc'};
-    my($key);
-    foreach $key (keys(%$assoc)) {
+    foreach my $key (keys %$assoc) {
 	$assoc->{$key} = undef;
     }
 }
@@ -552,6 +566,7 @@ sub pager {
     }
 
     $assoc->{'_PAGES_'} = $pages;
+    $assoc->{'_CURPAGE_'} = $curpage;
     $assoc->{'_MAXPAGES_'} = $maxpage;
 
     return $max;

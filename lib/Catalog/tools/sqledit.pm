@@ -16,15 +16,15 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
-package Ecila::tools::sqledit;
+package Catalog::tools::sqledit;
 use vars qw($head %default_templates);
 use strict;
 
 use Carp;
 use CGI;
-use Ecila::tools::cgi;
-use Ecila::db;
-use Ecila::tools::tools;
+use Catalog::tools::cgi;
+use Catalog::db;
+use Catalog::tools::tools;
 
 $head = "
 <body bgcolor=#ffffff>
@@ -219,12 +219,12 @@ sub initialize {
     $config = config_load("install.conf");
     %$self = (%$self, %$config) if(defined($config));
     
-    $self->{'db'} = Ecila::db->new() if(!defined($self->{'db'}));
+    $self->{'db'} = Catalog::db->new() if(!defined($self->{'db'}));
     my($db) = $self->{'db'};
-    $db->resources_load('sqledit_schema', 'Ecila::tools::schema');
+    $db->resources_load('sqledit_schema', 'Catalog::tools::schema');
     $db->connect_error_handler(sub { $self->connect_error_handler(@_); });
 
-    $self->{'params'} = [ 'table', 'links_set', 'stack', 'context', 'conf', 'order', 'style', 'limit' ];
+    $self->{'params'} = [ 'table', 'links_set', 'stack', 'context', 'conf', 'order', 'style', 'limit', 'page_length' ];
     $self->{'templates'} = { %default_templates };
 
     $self->special_auth_initialize();
@@ -246,7 +246,7 @@ sub run {
 	$close = 1;
     }
 
-    my($cgi) = Ecila::tools::cgi->new();
+    my($cgi) = Catalog::tools::cgi->new();
     $self->{'cgi'} = $cgi;
 
     my($key, $value);
@@ -262,7 +262,7 @@ sub run {
     return @returned;
 }
 
-$Ecila::tools::sqledit::run = 0;
+$Catalog::tools::sqledit::run = 0;
 
 sub selector {
     my($self, $cgi) = @_;
@@ -272,11 +272,11 @@ sub selector {
 	$close = 1;
     }
 
-    if($Ecila::tools::sqledit::run++ > 0) {
-	dbg("running in $$ : pass $Ecila::tools::sqledit::run\n", "sqledit");
+    if($Catalog::tools::sqledit::run++ > 0) {
+	dbg("running in $$ : pass $Catalog::tools::sqledit::run\n", "sqledit");
     }
 
-    $cgi = Ecila::tools::cgi->new() if(!defined($cgi));
+    $cgi = Catalog::tools::cgi->new() if(!defined($cgi));
 
     my($verbose) = $cgi->param('verbose');
     if(defined($verbose)) {
@@ -285,27 +285,34 @@ sub selector {
 	# verbose = 2 - enables opt_error_stack
 	# verbose = 3 - spare
 	# verbose>= 4 - sets DBI->trace to verbose-3
-	$::opt_verbose = $verbose if defined $verbose;
+	$::opt_verbose = $verbose;
 	$::opt_error_stack = ($::opt_verbose > 1);
-	DBI->trace($verbose-3) if defined $verbose;
+	DBI->trace(($verbose-3<0) ? 0 : $verbose-3);
     }
 
     my($context) = '';
     if(defined($cgi->param('context'))) {
 	$context = $cgi->param('context');
-    } elsif($cgi->path_info()) {
+    } elsif(my $pathname = $cgi->path_info()) {
 	$context = 'pathcontext';
-	my($pathname) = $cgi->path_info();
-	$pathname =~ s:([^/])$:$1/:o;
+	$pathname =~ s:([^/])$:$1/:;
 	$cgi->param('pathname', $pathname);
+    } else {
+	# probably pathcontext to root but missing the trailing slash,
+	# so that's where we'll redirect them:
+	my $url = $cgi->url . "/";
+        print join "",	"Status: 302 Moved\n",
+			"Location: $url\n",
+			"Content-Type: text/html\n\n";
+	return "";
     }
-    my($content) = $cgi->param('content') || "text/html";
-    #
-    # Unbuffered output so that gauge() shows
-    #
-    $| = 1;
+
+    $| = 0; # Unbuffered output enabled per-request in gauge() if needed
     $cgi->nph(1) if(exists($self->{'nph'}) && $self->{'nph'} eq 'yes');
+
+    my($content) = $cgi->param('content') || "text/html";
     print $cgi->header(-type => $content);
+
     if($context !~ /^[\w_]+$/io) {
 	print "'$context' is not a valid context name";
 	return "";
@@ -345,8 +352,7 @@ sub selector {
 
     $html = $error if($error);
 
-    if($cgi->param('dump')) {
-	my($file) = $cgi->param('dump');
+    if(my $file = $cgi->param('dump')) {
 	writefile($file, $html);
     }
 
@@ -400,6 +406,7 @@ sub special_auth_initialize {
 #
 sub gauge {
     my($self) = @_;
+    $| = 1;	# unbuffered output
 
     print " " if(exists($self->{'cgi'}));
 }
@@ -699,7 +706,7 @@ sub row2edit_1 {
 	my($desc) = $info->{$field};
 	my($type) = $desc->{'type'};
 	my($value) = defined($row) ? $row->{$field} : undef;
-	my($value_quoted) = defined($value) ? Ecila::tools::cgi::myescapeHTML($value) : '';
+	my($value_quoted) = defined($value) ? Catalog::tools::cgi::myescapeHTML($value) : '';
 	if($type eq 'char') {
 	    my($size);
 	    if($desc->{'size'} < 2) {
@@ -777,7 +784,7 @@ sub row2view {
     my($field);
     foreach $field (@$fields) {
 	my($value) = $row->{$field};
-	my($quoted_value) = Ecila::tools::cgi::myescapeHTML($row->{$field});
+	my($quoted_value) = Catalog::tools::cgi::myescapeHTML($row->{$field});
 	if($style eq 'short') {
 	    $html .= "<td>";
 	} else {
@@ -788,7 +795,7 @@ sub row2view {
 	if(defined($value)) {
 	    if($type eq 'char') {
 		if($style eq 'short' && length($value) > 30) {
-		    $quoted_value = Ecila::tools::cgi::myescapeHTML(substr($value, 0, 30)) . "...";
+		    $quoted_value = Catalog::tools::cgi::myescapeHTML(substr($value, 0, 30)) . "...";
 		}
 	    } elsif($type eq 'blob' && defined($value)) {
 		my($imageutil) = $self->{'imageutil'};
@@ -1020,7 +1027,7 @@ sub row2assoc_1 {
 	} elsif(defined($value)) {
 	    $value = '' if(!defined($value));
 	    if($form eq 'QUOTED') {
-		$assoc->{$tag} = Ecila::tools::cgi::myescapeHTML($value);
+		$assoc->{$tag} = Catalog::tools::cgi::myescapeHTML($value);
 	    } elsif($form eq 'CODED') {
 		$assoc->{$tag} = CGI::escape($value);
 	    } else {
@@ -1722,8 +1729,7 @@ sub searcher_layout {
     my($results);
     my($expand) = $context->{'expand'};
     if(!defined($expand)) {
-	my($row);
-	foreach $row (@$rows) {
+	foreach my $row (@$rows) {
 	    push(@$results, { map { $_ => $row } @$tables });
 	}
     } elsif(!ref($expand)) {
@@ -1736,26 +1742,25 @@ sub searcher_layout {
     #
     # Display result of expansion
     #
-    my($html) = '';
+    my @html;
     if(!exists($params->{'style'}) || $params->{'style'} eq 'list') {
 	dbg("searcher_layout: style list", "sqledit");
-	my($result);
-	foreach $result (@$results) {
-	    $html .= &$func($template_entry, '_noname_', $result, $context);
+	foreach my $result (@$results) {
+	    push @html, &$func($template_entry, '_noname_', $result, $context);
 	}
-	$template_entry->{'html'} = $html;
-    } elsif($params->{'style'} eq 'table') {
+	$template_entry->{'html'} = join "", @html;
+    }
+    elsif($params->{'style'} eq 'table') {
 	dbg("searcher_layout: style table", "sqledit");
 	my($template_row) = $template->{'children'}->{'row'};
 	error("missing row template") if(!defined($template_row));
 	my($count_max) = $params->{'columns'} || 5;
 	my($count) = 0;
 	my($columns) = '';
-	my($result);
-	foreach $result (@$results) {
+	foreach my $result (@$results) {
 	    if($count >= $count_max) {
 		$template_entry->{'html'} = $columns;
-		$html .= $self->stemplate_build($template_row);
+		push @html, $self->stemplate_build($template_row);
 		$columns = '';
 		$count = 0;
 	    }
@@ -1764,11 +1769,12 @@ sub searcher_layout {
 	}
 	if($count > 0) {
 	    $template_entry->{'html'} = $columns;
-	    $html .= $self->stemplate_build($template_row);
+	    push @html, $self->stemplate_build($template_row);
 	}
-	$template_row->{'html'} = $html;
-    } else {
-	croak("unknown style $params->{'style'}");
+	$template_row->{'html'} = join "", @html;
+    }
+    else {
+	croak("unknown style '$params->{style}'");
     }
 }
 
@@ -1919,7 +1925,7 @@ sub template {
 sub stemplate_build {
     my($self, $template) = @_;
     my($cgi) = $self->{'cgi'};
-    template_set($template->{'assoc'}, '_SCRIPT_', $cgi->url('-absolute' => 1));
+    template_set($template->{'assoc'}, '_SCRIPT_', $cgi->script_name());
     template_set($template->{'assoc'}, '_HTMLPATH_', $self->{'htmlpath'});
     return template_build($template);
 }
@@ -2328,11 +2334,11 @@ sub confedit {
     $self->{'cgi'} = $cgi;
 
     my($action) = $cgi->param('action');
-    my($dir) = $cgi->param('dir') || $ENV{'CONFIG_DIR'};
-    $dir = '.' if(!defined($dir));
+    my($dir) = $ENV{'CONFIG_DIR'} || '.';
 
     my($file) = $cgi->param('file');
-    if($file !~ /^\//) {
+    $self->serror("%s may not contain / ") if($file =~ /\//);
+    if(! -f $file) {
 	$file = "$dir/$file";
     }
     if(! -f $file && $cgi->param('create')) {
@@ -2352,7 +2358,7 @@ sub confedit {
     my($cols) = $cgi->param('cols') || 80;
 
     my($template) = $self->template("edit");
-    template_set($template->{'assoc'}, '_TEXT_', Ecila::tools::cgi::myescapeHTML($text));
+    template_set($template->{'assoc'}, '_TEXT_', Catalog::tools::cgi::myescapeHTML($text));
     template_set($template->{'assoc'}, '_COMMENT_', $comment);
     template_set($template->{'assoc'}, '_ROWS_', $rows);
     template_set($template->{'assoc'}, '_COLS_', $cols);

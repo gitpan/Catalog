@@ -16,13 +16,13 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
-package Ecila::tools::cgi;
+package Catalog::tools::cgi;
 use vars qw(@ISA $random %char2quote);
 use strict;
 
-use CGI;
+use CGI qw(:compile);
 use Carp;
-use Ecila::tools::tools;
+use Catalog::tools::tools;
 
 @ISA = qw(CGI);
 
@@ -82,18 +82,22 @@ sub fct_call {
     $params .= "&fct_returned=" . CGI::escape(hash2params($args{'returned'}));
     $params .= "&fct_name=$args{'name'}";
 
-    my($file) = "$self->{'fct_dir'}/" . time() . $$ . $random++;
+    my($filebase) = time() . $$ . $random++;	# see also fct_return
+    my($file) = "$self->{'fct_dir'}/$filebase";
     open(FILE, ">$file") or error("cannot open $file for writing : $!");
     $self->save('FILE');
     close(FILE);
 
-    $params .= "&fct_stack=$file";
+	# Save base name only to minimise security issues.
+	# XXX still allows deletion of any file in /tmp if the
+	# default fct_dir value in cgi.conf is used
+    $params .= "&fct_stack=$filebase"; # see also fct_return
 
 #
 # Wait for the fileno() bug to be fixed
 #
-#    my($cgi) = Ecila::tools::cgi->new($params);
-    my($cgi) = Ecila::tools::cgi->new();
+#    my($cgi) = Catalog::tools::cgi->new($params);
+    my($cgi) = Catalog::tools::cgi->new();
     $cgi->delete_all();
     my(@pairs) = split(/[&]/, $params);
     my($param,$value);
@@ -157,9 +161,11 @@ sub fct_extract {
 sub fct_return {
     my($self, %args) = @_;
 
-    my($file) = $self->param('fct_stack');
+    my($filebase) = $self->param('fct_stack');
+	$filebase = $1 if $filebase =~ m/^(\d+)$/; # untaint
+	my($file) = "$self->{'fct_dir'}/$filebase";
     open(FILE, "<$file") or error("cannot open $file for reading : $!");
-    my($cgi) = Ecila::tools::cgi->new('FILE');
+    my($cgi) = Catalog::tools::cgi->new('FILE');
     close(FILE);
     unlink($file);
 

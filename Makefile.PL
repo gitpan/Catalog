@@ -1,3 +1,23 @@
+#
+#   Copyright (C) 1998, 1999 Loic Dachary
+#
+#   This program is free software; you can redistribute it and/or modify it
+#   under the terms of the GNU General Public License as published by the
+#   Free Software Foundation; either version 2, or (at your option) any
+#   later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software
+#   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+#
+# 
+# $Header: /usr/local/cvsroot/Catalog/Makefile.PL,v 1.41 1999/07/03 12:07:03 loic Exp $
+#
 # This -*- perl -*- script writes the Makefile for Catalog
 
 require 5.005;
@@ -9,27 +29,9 @@ my(@programs_to_install) = qw(convert_dmoz contribute);
 
 use ExtUtils::MakeMaker;
 
-sub version_check {
-    my($what, $min_version, $test) = @_;
+require "conf/lib.pl";
 
-    print "Checking for $what... ";
-    $test .= "; die '' if(\$${what}::VERSION < \$min_version); \$${what}::VERSION";
-    my $got_version = eval $test;
-	$got_version = "undef" unless defined $got_version;
-    if ($@) {
-	print " failed\n";
-	print <<EOT;
-$@
-Catalog needs $what module, version >= $min_version
-EOT
-        exit;
-    } else {
-        eval "print \" \$${what}::VERSION ok\n\"";
-    }
-}
-
-version_check('DBI', '1.02', 'require DBI;');
-version_check('DBD::mysql', '2.0210', 'require DBI; require DBD::mysql;');
+version_check('DBI', '1.08', 'require DBI;');
 version_check('MD5', '1.7', 'require MD5;');
 version_check('CGI', '2.46', 'require CGI;');
 version_check('XML::Parser', '2.22', 'require XML::Parser;');
@@ -37,28 +39,18 @@ version_check('XML::DOM', '1.19', 'require XML::DOM;');
 version_check('MIME::Base64', '2.11', 'require MIME::Base64;');
 version_check('Unicode::String', '2.02', 'require Unicode::String;');
 version_check('Unicode::Map8', '0.06', 'require Unicode::Map8;');
+version_check('Text::Query', '0.07', 'require Text::Query;');
+version_check('Text::Query::BuildSQL', '0.05', 'require Text::Query::BuildSQL;');
 
 my($subdirs) = "cgi-bin conf example images doc";
-
-system("perl -pi -e 's/Ecila::/Catalog::/g' lib/Catalog/tools/*.pm");
-
-#
-# Wait for Unicode::String 1.20 to fix CORE:: warnings
-#
-sub ExtUtils::MM_Unix::test_via_harness {
-    my($self, $perl, $tests) = @_;
-    $perl = "PERL_DL_NONLAZY=1 $perl" unless $ExtUtils::MM_Unix::Is_Win32;
-    "\t$perl".q! -I$(INST_ARCHLIB) -I$(INST_LIB) -I$(PERL_ARCHLIB) -I$(PERL_LIB) -e 'use Test::Harness qw(&runtests $$verbose $$switches); $$verbose=$(TEST_VERBOSE); $$switches = ""; runtests @ARGV;' !."$tests\n";
-}
 
 sub MY::postamble { 
 return '
 clean ::
 	rm -fr t/fulcrum t/tmp t/conf/mysql.conf t/conf/install.conf
-	perl -pi -e "s/Catalog::/Ecila::/g" lib/Catalog/tools/*.pm 
 
 ptags:
-	ptags lib/*pm lib/*/*.pm lib/*/tools/[cmst]*.pm
+	ptags lib/Catalog.pm lib/Catalog/???*.pm lib/Catalog/db/*pm lib/Catalog/tools/[cmst]*.pm
 
 cvs_diff_tag :
 	$(MAKE) realclean

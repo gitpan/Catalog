@@ -16,7 +16,7 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/external.pm,v 1.4 1999/05/15 14:20:48 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/external.pm,v 1.6 1999/07/02 12:11:48 loic Exp $
 #
 package Catalog::external;
 
@@ -70,8 +70,10 @@ sub load {
 				   );
     $self->{'DOM'} = XML::DOM::Parser->new();
 
-    $parser->parsefile($file);
+    eval { $parser->parsefile($file); };
+    my($error) = $@;
     close($self->{'FILE'});
+    error($error) if($error);
 }
 
 sub unload {
@@ -299,8 +301,7 @@ sub extractor {
 	if($@) {
 	    my($error) = $@;
 	    my($line) = $expat->current_line();
-	    close($self->{'FILE'});
-	    error("$self->{'FILE'}: line $line: $error");
+	    warn("$self->{'FILE'}: line $line: $error");
 	}
     }
     $self->{'start'} = $end;
@@ -402,10 +403,10 @@ sub Category {
     my($catalog) = $self->{'catalog'};
     my($name) = $self->{'name'};
     my($rowid) = $catalog->db()->insert("catalog_category_$name",
-				  %record);
+					%record);
     $catalog->db()->insert("catalog_category2category_$name",
-		     'up' => $parent,
-		     'down' => $rowid);
+			   'up' => $parent,
+			   'down' => $rowid);
 
     $catalog->gauge();
 }
@@ -421,8 +422,8 @@ sub Symlink {
 
     eval {
 	$catalog->db()->insert("catalog_category2category_$name",
-			 'info' => 'symlink',
-			 %$record);
+			       'info' => 'symlink',
+			       %$record);
     };
 }
 
@@ -440,13 +441,13 @@ sub Auth {
 	$auth = $row->{'rowid'};
     } else {
 	$auth = $catalog->db()->insert("catalog_auth",
-				 'login' => $record->{'login'});
+				       'login' => $record->{'login'});
     }
 
     $catalog->db()->insert("catalog_auth_properties",
-		     'auth' => $auth,
-		     'catalogname' => $name,
-		     'categorypointer' => $record->{'category'});
+			   'auth' => $auth,
+			   'catalogname' => $name,
+			   'categorypointer' => $record->{'category'});
 }
 
 sub Record {
@@ -460,7 +461,7 @@ sub Record {
     my($catalog) = $self->{'catalog'};
 
     $catalog->db()->insert($table,
-		     %$record);
+			   %$record);
 }
 
 sub Sync {
@@ -472,9 +473,13 @@ sub Sync {
     #
     # Rebuild computed data
     #
+#    warn("Sync: start");
     $catalog->db()->exec("drop table catalog_path_$name");
+#    warn("Sync: rebuild catalog_path_$name");
     $catalog->pathcheck($name);
+#    warn("Sync: restore category counts");
     $catalog->category_count_api($name);
+#    warn("Sync: done");
 }
 
 #

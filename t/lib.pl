@@ -1,3 +1,23 @@
+#
+#   Copyright (C) 1998, 1999 Loic Dachary
+#
+#   This program is free software; you can redistribute it and/or modify it
+#   under the terms of the GNU General Public License as published by the
+#   Free Software Foundation; either version 2, or (at your option) any
+#   later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software
+#   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+#
+# 
+# $Header: /usr/local/cvsroot/Catalog/t/lib.pl,v 1.5 1999/05/31 18:33:08 loic Exp $
+#
 use Cwd;
 use Catalog;
 
@@ -12,56 +32,27 @@ $ENV{'GATEWAY_INTERFACE'} = 'CGI-Perl';
 #$::opt_error_stack = 'yes';
 
 #
-# Run a private mysqld daemon to prevent accidental polution
+# Run a private daemon to prevent accidental polution
 #
 mkdir("t/tmp", 0777) if(! -d "t/tmp");
 
-#
-# Copy and modify configuration files for test
-#
-sub conftest {
-    my($mysql_conf) = load_config("conf/mysql.conf");
-    $mysql_conf->{'base'} = 'test';
-    $mysql_conf->{'host'} = 'localhost';
-    $mysql_conf->{'port'} = '7777';
-    my($cwd) = getcwd();
-    $mysql_conf->{'unix_port'} = "$cwd/t/tmp/db.sock";
-    $mysql_conf->{'user'} = undef;
-    $mysql_conf->{'passwd'} = undef;
-    unload_config($mysql_conf, "conf/mysql.conf", "t/conf/mysql.conf");
+my($db_conf) = load_config("conf/db.conf");
 
+require "t/$db_conf->{'db_type'}.pl";
+
+sub conftest_generic {
     my($install_conf) = load_config("conf/install.conf");
     unload_config($install_conf, "conf/install.conf", "t/conf/install.conf");
+
+    my($db_conf) = load_config("conf/db.conf");
+    unload_config($db_conf, "conf/db.conf", "t/conf/db.conf");
+
+    rundb();
 }
 
-sub rundb {
-    conftest();
-    my($mysql_conf) = load_config("t/conf/mysql.conf");
-    my($mysqld) = "$mysql_conf->{'home'}/libexec/mysqld";
-    $mysqld = "$mysql_conf->{'home'}/sbin/mysqld" unless(-f $mysqld && -x $mysqld);
-    error("$mysqld is not an executable file") unless(-f $mysqld && -x $mysqld);
-    if(-f "t/tmp/db.pid") {
-	system("kill -15 `cat t/tmp/db.pid` 2>/dev/null");
-    }
-    system("rm -fr t/tmp/db");
-    mkdir("t/tmp/db", 0777);
-    my($mysql_opt) = "--port $mysql_conf->{'port'} --socket $mysql_conf->{'unix_port'}";
-    my($cwd) = getcwd();
-    my($cmd) = "$mysqld --skip-grant-table --datadir=$cwd/t/tmp/db --pid-file $cwd/t/tmp/db.pid $mysql_opt > /dev/null 2>&1 &";
-    system($cmd);
-    #
-    # Wait a bit for the server to start
-    #
-    system("sleep 3");
-    system("$mysql_conf->{'home'}/bin/mysql $mysql_opt -e 'create database test'");
-}
-
-sub stopdb {
-#
-# Cleanup
-#
-    system("rm t/conf/mysql.conf t/conf/install.conf ; kill -15 `cat t/tmp/db.pid`");
-    system("sleep 3");
+sub conftest_generic_clean {
+    system("rm t/conf/install.conf t/conf/db.conf");
+    stopdb();
 }
 
 #

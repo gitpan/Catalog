@@ -1,3 +1,7 @@
+1999-05-19  Loic DACHARY  <loic@home.ceic.com>
+
+	* sqledit.pm (stemplate_build): change to script_name
+
 1999-05-15  Loic Dachary  <loic@ceic.com>
 
 	* sqledit.pm (selector): local($SIG{__DIE__}); (Thanks Tim Bunce) to reduce stack redundancy.

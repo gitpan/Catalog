@@ -16,7 +16,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/implementation.pm,v 1.1 1999/05/15 14:20:48 ecila40 Exp $
+# $Header: /usr/local/cvsroot/Catalog/lib/Catalog/implementation.pm,v 1.7 1999/07/02 13:36:53 loic Exp $
 #
 package Catalog::implementation;
 use strict;
@@ -28,6 +28,7 @@ use vars qw(@tablelist_theme @tablelist_alpha @tablelist_date);
 @tablelist_date = qw(catalog_date);
 
 use MD5;
+use Text::Query;
 use File::Path;
 use Catalog::tools::tools;
 use Catalog::path qw(path_simplify_component);
@@ -211,7 +212,7 @@ sub cdate_count_1_api {
 
     my($where) = $catalog->{'cwhere'};
     if(defined($where) && $where !~ /^\s*$/) {
-	$where = "and ($where)";
+	$where = "where ($where)";
     } else {
 	$where = '';
     }
@@ -241,20 +242,23 @@ sub pathcheck {
 
 	my($catalog) = $self->cinfo()->{$name};
 	$self->db()->insert($table,
-		      'pathname' => '/',
-		      'md5' => MD5->hexhash('/'),
-		      'path' => ' ',
-		      'id' => $catalog->{'root'});
+			    'pathname' => '/',
+			    'md5' => MD5->hexhash('/'),
+			    'path' => ' ',
+			    'id' => $catalog->{'root'});
 	my($func) = sub {
 	    my($id, $name, $pathname, $path) = @_;
 
 	    $pathname = path_simplify_component("/$pathname/");
-	    $self->db()->insert($table,
-			  'pathname' => $pathname,
-			  'md5' => MD5->hexhash($pathname),
-			  'path' => ",$path,",
-			  'id' => $id
-			  );
+	    eval {
+		$self->db()->insert($table,
+				    'pathname' => $pathname,
+				    'md5' => MD5->hexhash($pathname),
+				    'path' => ",$path,",
+				    'id' => $id
+				    );
+	    };
+	    warn("$@") if($@);
 	    $self->gauge();
 	    return 1;
 	};
@@ -381,14 +385,24 @@ sub category_count_api {
 sub category_count_1 {
     my($self, $name, $where, $table, $id) = @_;
 
-    my($count) = $self->db()->exec_select_one("select count(*) from $table, catalog_entry2category_$name where ($table.rowid = catalog_entry2category_$name.row and catalog_entry2category_$name.category = $id) $where")->{'count(*)'};
+    my($count) = $self->db()->exec_select_one(qq{
+	select count(*)
+	from $table, catalog_entry2category_$name
+	where ($table.rowid = catalog_entry2category_$name.row
+		and catalog_entry2category_$name.category = $id)
+		$where
+    })->{'count(*)'};
 
     dbg("found $count entries at id $id", "catalog");
 
-    my($rows) = $self->db()->exec_select("select a.rowid from catalog_category_$name as a, catalog_category2category_$name as b where a.rowid = b.down and b.up = $id");
+    my($rows) = $self->db()->exec_select(qq{
+	select b.down
+	from catalog_category2category_$name as b
+	where b.up = $id and (b.info is null or not find_in_set('symlink', b.info))
+    });
     my($row);
     foreach $row (@$rows) {
-	$count += $self->category_count_1($name, $where, $table, $row->{'rowid'});
+	$count += $self->category_count_1($name, $where, $table, $row->{down});
 	$self->gauge();
     }
 
@@ -396,27 +410,6 @@ sub category_count_1 {
 		  'count' => $count);
     
     return $count;
-}
-
-#
-# Translate a string query specified by user to a list of words
-#
-sub string2words {
-    my($self, $string) = @_;
-
-    my(@words);
-    if(!exists($self->{'encoding'}) ||
-       $self->{'encoding'} =~ /^iso-latin/io ||
-       $self->{'encoding'} =~ /^iso-8859/io) {
-	while($string =~ /([a-z0-9\200-\376-]+)/oig) {
-	    my($word) = lc($1);
-	    $word =~ s/([a-z])/\[$1\u$1\]/g;
-	    push(@words, $word);
-	}
-    } else {
-	@words = split(' ', $string);
-    }
-    return @words;
 }
 
 #
@@ -511,7 +504,7 @@ sub select_linked_categories {
     my ($rows) = $self->db()->exec_select(qq{
 	select down
 	from catalog_category2category_$name
-	where up = $id and not find_in_set('symlink', info)
+	where up = $id and (info is null or not find_in_set('symlink', info))
     });
     return $rows ? [ map { $_->{down} } @$rows ] : undef;
 }
@@ -888,6 +881,20 @@ sub cbuild_theme {
     $self->db()->update("catalog", "rowid = '$rowid'",
 		  'root' => $root_rowid);
     
+}
+
+sub csearch_parse {
+    my($self, $words, $querymode, $fields_searched, $select) = @_;
+
+    my($parse_package) = (!defined($querymode) || $querymode eq 'simple') ? 'Text::Query::ParseSimple' : 'Text::Query::ParseAdvanced';
+
+    my($query) = Text::Query->new($words,
+				  -parse => $parse_package,
+				  -build => 'Text::Query::BuildSQLMySQL',
+				  -fields_searched => $fields_searched,
+				  -select => $select);
+
+    return $query->matchexp();
 }
 
 #
