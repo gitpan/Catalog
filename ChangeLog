@@ -1,0 +1,144 @@
+1999-03-15  Loic Dachary  <loic@loic.ceic.com>
+
+	* doc/catalog.texinfo: fully comment the example provided
+
+1999-03-11  Loic Dachary  <loic@loic.ceic.com>
+
+	* doc/Makefile (catalog_toc.html): Fix nested table bug with texi2html
+
+	* example/Makefile : use a separate database for the example
+
+1999-03-10  Loic Dachary  <loic@loic.ceic.com>
+
+	* Makefile.PL: added config.cache and CGIPATH
+
+	* example: create a fully functional example that demonstrate the
+	typical use of catalog.
+
+	* doc/catalog.texinfo: update the documentation for csearch
+
+	* lib/Catalog.pm: fix bugs
+
+1999-03-09  root  <root@localhost.localdomain>
+
+	* lib/Catalog.pm: implement csearch 
+
+1999-03-08  root  <root@transparens-1.clients.easynet.fr>
+
+	* doc/catalog.texinfo: update for cdump & pathcontext
+	
+	* lib/Catalog.pm: cosmetic changes to control panel + access to intuitive navigation
+
+	* lib/Catalog.pm: implement cdump (add dump and dumplocation fields)
+	The catalog table has two new fields:
+	alter table catalog add dump varchar(255);
+	alter table catalog add dumplocation varchar(255);
+
+	* lib/Catalog.pm: pathcontext_params instruction in catalog.conf
+
+	* lib/Catalog.pm: if category renamed, update catalog_path
+
+	* lib/Catalog.pm: modify browsing, insert, delete to update catalog_path
+
+	* lib/Catalog.pm: add pathcontext intuitive navigation (catalog_path_<name> table)
+
+1999-02-26  Loic Dachary  <loic@loic.ceic.com>
+
+	* doc/catalog.texinfo (SQL editor configuration file): added nph option in 
+	sqledit.conf
+
+1999-02-24  Loic Dachary  <loic@loic.ceic.com>
+
+	* Catalog-0.3 release
+
+1999-02-23  Loic Dachary  <loic@loic.ceic.com>
+
+	* doc/catalog.texinfo: update documentation to reflect the cosmetic
+	changes of the interface. 
+	Document the chronological catalog capability.
+
+1999-02-22  Loic Dachary  <loic@loic.ceic.com>
+
+	* t/catalog.t: added tests for category edit and entry edit
+
+	* added images directory with clipart
+	
+	* conf/catalog.conf (htmlpath): added htmlpath option
+
+	* lib/Catalog.pm (searcher_links): added edit link for category and 
+	entries. 
+	Use images in category edit form.
+	Customize template for category browsing when creating a symbolic link.
+	Customize category edit/insert form.
+	
+	* doc/Makefile (catalog_toc.html): split to node instead of chapter
+
+	* Makefile.PL: added HTMLPATH
+
+	* Makefile.PL: HTMLDIR is now mandatory : used for images and examples
+
+1999-02-19  Loic Dachary  <loic@loic.ceic.com>
+
+	* doc/catalog.texinfo (Catalog editing): update screen shots and text 
+	to accomodate the new catalog insert/edit templates.
+	Fix a lot of typos.
+
+	* lib/Catalog.pm (ccontrol_panel): rewrite to get rid of clumsy
+	CGI formating functions.
+
+	* Customize insert/edit forms for catalogs
+
+1999-02-18  Loic Dachary  <loic@loic.ceic.com>
+
+	* lib/Catalog.pm(cbuild): added basic sanity checks 
+
+	* add action=_SCRIPT_ in evry form
+	
+	* rewrite test framework : use Test instead of TBone because std. 
+	Added fct to test memory eating. 
+
+	* t/catalog.t Write tests for all interactive actions.
+
+	* lib/Catalog.pm (cdate): fix inverted test
+	(cdate_index): fix date_sub -1 instead of date_sub 1
+
+1999-02-16  Loic Dachary  <loic@loic.ceic.com>
+
+	* lib/Catalog.pm (cbuild): fix bug side effect on @tablelist
+
+1999-02-09  Loic Dachary  <loic@loic.ceic.com>
+
+	* doc/Makefile (install_info): makeinfo breaks on @images, fix
+	(install_info): automatic update of info dir file
+
+	* t/catalog.t: rewrite the test framework, use ExtUtils::TBone. 
+	Use local mysqld to prevent trashing an existing base. 
+	Only one test, though.
+
+1999-02-08  Loic Dachary  <loic@loic.ceic.com>
+
+	* Catalog-0.2 release
+	
+	* doc/catalog.texinfo (Setup): simplify because AUTH prevents the first 
+	error panel. 
+
+	* INSTALL (Configuration): document AUTH var
+
+	* Makefile.PL (dbconnect): installation procedure now patch user and passwd
+
+1999-02-02  Loic DACHARY  <loic@home.ceic.com>
+
+	* add MANIFEST & dist stuff
+
+1999-02-02    <ecila40@interdev>
+
+	* doc/catalog.texinfo (Setup): fix beginning of chapter for easier
+		understanding when in the install process.
+
+	* Makefile.PL: Fix version checking
+
+	* Double check Catalog and mod_perl (Apache::Registry + Apache::DBI +
+		Apache::MaximumSize). Apparently does not leak. Didn't test
+		really though.
+
+	* Catalog-0.1 release

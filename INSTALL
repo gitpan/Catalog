@@ -1,0 +1,369 @@
+$Id: INSTALL,v 1.15 1999/03/10 19:22:40 ecila40 Exp $
+
+The Catalog home page is http://www.senga.org/
+
+Requires: 
+---------
+          At the end of this file you will find scripts that will help
+          you install these components on specific plateforms. The 
+          distributions packages of all these specific versions can be 
+          found on the senga site at http://www.senga.org/download.html.
+
+          To build the software you will need:
+
+          perl5.005 or higher (http://www.perl.org/)
+          mysql-3.22.8-beta or higher (http://www.tcx.se/)
+          DBI-1.02 or higher (http://www.perl.org/, CPAN section)
+          MD5-1.7 or higher (http://www.perl.org/, CPAN section)
+          CGI-2.46 or higher (http://www.perl.org/, CPAN section)
+          Msql-Mysql-modules-1.2010 or higher (http://www.perl.org/, CPAN section)
+          An HTTP server (Apache for instance) running on your local machine.
+
+          To build the documentation (optional) you will need:
+
+          HTML format : texi2html-1.51a or any version handling @image
+          PS format : texi2dvi, TeX, dvips
+          Emacs info format : makeinfo-3.12 or higher
+
+Quick start:
+------------
+          #
+          # Extract the distribution
+          #
+          tar -zxvf Catalog-*.tar.gz
+          #
+          # Go to the distribution directory
+          #
+          cd Catalog-*
+          #
+          # replace /home/httpd/cgi-bin by your cgi-bin directory
+          # replace /home/httpd/html by the directory where you put your
+          #     HTML pages.
+          #
+	  mkdir /home/httpd/html/Catalog
+          INFODIR='' HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
+	     CONFIG_DIR='' \
+             CGIDIR=/home/httpd/cgi-bin CGIPATH=/cgi-bin \
+	     USERID=nobody AUTH='root:passpass' \
+             perl Makefile.PL
+          #
+          # Install the software
+          #
+          make install
+          #
+          # Read the Setup chapter in the documentation. It will 
+          # teach you how to configure catalog and create your first catalog.
+          #
+          netscape http://www.mymachine.org/Catalog/catalog_toc.html
+          #
+          # Go to URL http://www.mymachine.org/cgi-bin/Catalog?context=ccontrol_panel
+          # to get the Catalog Control Panel.
+          #
+          netscape http://www.mymachine.org/cgi-bin/Catalog?context=ccontrol_panel
+
+Configuration:
+--------------
+
+          tar -zxvf Catalog-*.tar.gz
+
+          cd Catalog-*
+
+          perl Makefile.PL
+
+              At this point you can either answer the questions or
+                pre-define the answers using the following environment 
+                variables:
+
+              CGIDIR for the path of the directory where the cgi-bin 
+                     programs will be installed.
+	      CGIPATH for the location of the cgi-bin scripts when browsing
+	               from a navgigator. Typically if you've set CGIDIR to
+	               /home/httpd/cgi-bin this will be /cgi-bin.
+              CONFIG_DIR If not specified it will default to CGIDIR. 
+                     CONFIG_DIR is the path of the directory where the default 
+                     configuration files will be installed. Existing
+                     configuration files, if any, will be preserved. 
+                     The cgi-bin programs will only be able to find the
+                     configuration files if they have the CONFIG_DIR variable
+                     properly set in their environment.
+              HTMLDIR for the path of the HTML directory where the
+                      HTML material (doc, images...) will be installed. Note 
+		      that images in the documentation will only be included if
+	              you have texi2html version 1.51a (by default on GNU
+	              Linux RedHat 5.2, if you installed everything from 
+	              the distribution).
+	      HTMLPATH for the location of the Catalog material when browsing
+	               from a navgigator. Typically if you've set HTMLDIR to
+	               /home/httpd/html/Catalog this will be /Catalog.
+              INFODIR for the path of the info directory where the
+                      documentation will be installed.
+              USERID The user id of the HTTP daemon. The configuration files
+                     must have the same owner because the HTML interface
+                     must be able to modify them.
+              AUTH   The user and password to connect to the database, separated
+                     by a colon. For instance 'root:passpass' is a valid value.
+                     An attempt to connect to the database will validate these
+                     values. If a Catalog has already been installed and a 
+                     configuration file exists in the CONFIG_DIR directory, there
+                     is no need to specify the user and password, the existing
+                     configuration file will not be modified.
+
+              If INFODIR is set to the empty string, the documentation is
+	      not formated to info format and not installed.
+
+              HTMLDIR must be specified, otherwise images will be missing
+	         for the Catalog administration interface.
+
+              CGIDIR must be specified, otherwise you won't be
+                 able to run Catalog at all.
+
+          make install
+
+	  All the configuration environment variables are saved in the
+	  config.cache file and re-used when perl Makefile.PL is run. This
+	  allows you to run perl Makefile.PL more than once without the need
+	  to specify all the variables or to manually edit the file to change
+	  a specific variable.
+
+Plateform specific:
+-------------------
+
+These sections are helpers to install the software required before
+you can use Catalog. The distributions packages of all these specific 
+versions can be found on the senga site at http://www.senga.org/download.html.
+
+RedHat 5.2
+----------
+
+#
+# Run these as root user
+#
+#
+# Build perl (RedHat 5.2 is shipped with perl5.004_04 and we need perl5.005_02)
+# /mirror/pub/perl is a mirror of ftp.perl.org
+#
+tar -zxf /mirror/pub/perl/CPAN/src/perl5.005_02.tar.gz ; \
+	cd perl5.005_02 ; \
+	sh Configure -des ; \
+	make ; \
+	make install
+#
+# Check that we are using the just compiled perl
+#
+perl -v
+#
+# Install MySQL, /mirror/pub/mysql is a mirror of ftp.tcx.se
+#
+rpm -ivh /mirror/pub/mysql/Downloads/MySQL-3.22/MySQL-client-3.22.14b-gamma-1.i386.rpm
+rpm -ivh /mirror/pub/mysql/Downloads/MySQL-3.22/MySQL-3.22.14b-gamma-1.i386.rpm
+#
+# Set up permissions as suggested by the installation
+#
+/usr/bin/mysqladmin -u root password 'passpass'
+#
+# Finish MySQL installation, /mirror/pub/mysql is a mirror of ftp.tcx.se
+#
+rpm -ivh /mirror/pub/mysql/Downloads/MySQL-3.22/MySQL-devel-3.22.14b-gamma-1.i386.rpm
+#
+# Build DBI, /mirror/pub/perl is a 
+# mirror of ftp.perl.org
+#
+cd /usr/local/src; \
+	tar -zxvf /mirror/pub/perl/CPAN/modules/by-category/07_Database_Interfaces/DBI/DBI-1.06.tar.gz ; \ 
+	cd DBI-1.06 ; \
+	perl Makefile.PL ; \
+	make ; \
+	make install
+#
+# Build MD5, /mirror/pub/perl is a 
+# mirror of ftp.perl.org
+#
+cd /usr/local/src; \
+	tar -zxvf /mirror/pub/perl/CPAN/modules/by-module/MD5/MD5-1.7.tar.gz ; \ 
+	cd MD5-1.7 ; \
+	perl Makefile.PL ; \
+	make ; \
+	make install
+#
+# Install Msql-Mysql-modules-1.2017, /mirror/pub/perl is a 
+# mirror of ftp.perl.org
+#
+cd /usr/local/src; \
+        tar zxvf \
+        /mirror/pub/perl/CPAN/modules/by-category/07_Database_Interfaces/DBD/Msql-Mysql-modules-1.2017.tar.gz; \
+        cd Msql-Mysql-modules-1.2017; \
+        MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 perl Makefile.PL; \
+        make; \
+        make install;
+#
+# Build Catalog
+#
+gtar -zxvf ../src/Catalog-*.gz
+cd Catalog-*
+mkdir /home/httpd/html/Catalog
+INFODIR='' HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
+ CONFIG_DIR='' \
+ CGIDIR=/home/httpd/cgi-bin CGIPATH=/cgi-bin \
+ USERID=nobody \
+ AUTH='root:passpass' perl Makefile.PL
+make 
+make test
+make install
+
+Solaris 2.6
+-----------
+#
+# These instructions assume that you're a normal user on a Solaris 2.6
+# system, without root privileges. The instructions do not differ much
+# if you have root access.
+#
+#
+# You will need a make, C and C++ compiler for MySQL and Perl. Find those
+# on www.sunfreeware.com. 
+#
+mkdir src
+# 
+# Download the necessary packages from your preferred ftp site or from 
+# http://www.senga.org/download.html
+#
+mkdir ../ports ; cd ../ports
+#
+# Build perl
+#
+gtar -zxf ../src/perl5.005_02.tar.gz 
+cd perl5.005_02
+prefix=$HOME/myperl
+LD_LIBRARY_PATH=:`pwd`:$LD_LIBRARY_PATH \
+ sh Configure -des -Dprefix=$prefix -Dlocincpth=$prefix/include -Dloclibpth=$prefix/lib ; \
+        make ; \
+        make install
+export PATH=$prefix/bin:$PATH
+cd ..
+#
+# Build MySQL (beware, you will need egcs !)
+#
+gtar -zxvf ../src/mysql-3.22.16a-gamma.tar.gz
+cd mysql-3.22.16a-gamma
+prefix=$HOME/mysql
+./configure --prefix=$prefix
+make all install
+./scripts/mysql_install_db
+export PATH=$prefix/bin:$PATH
+#
+# kill -9 the safe_mysql
+#
+kill -9 `cat $HOME/mysql/var/*.pid`
+$HOME/mysql/libexec/mysqld &
+#
+# Allow user to connect to the base 
+#
+mysql mysql <<EOF
+delete from db ;
+delete from host;
+delete from user; 
+delete from func;
+
+#
+# Dumping data for table 'db'
+#
+
+INSERT INTO db VALUES ('%','$LOGNAME','','Y','Y','Y','Y','Y','Y');
+
+#
+# Dumping data for table 'host'
+#
+
+INSERT INTO host VALUES ('localhost','%','Y','Y','Y','Y','Y','Y');
+
+#
+# Dumping data for table 'user'
+#
+
+INSERT INTO user VALUES ('localhost','$LOGNAME',PASSWORD('passpass'),'Y','Y','Y','Y','Y','Y','Y','Y','Y','Y');
+EOF
+kill -15 `cat $HOME/mysql/var/*.pid`
+$HOME/mysql/libexec/mysqld &
+cd ..
+#
+# Build Apache
+#
+gtar -zxvf ../src/apache_1.3.4.tar.gz
+cd apache_1.3.4
+prefix=$HOME/myapache
+./configure --prefix=$prefix
+make 
+make install
+#
+# Edit $prefix/etc/httpd.conf and change the user and group
+# 
+# User <your user id>
+# Group <your group name>
+#
+# uncomment the line starting with ServerName
+#
+# ServerName www.yourmachine.org
+#
+# Edit $prefix/etc/srm.conf and uncomment the ScriptAlias line
+#
+# ScriptAlias /cgi-bin/ <apache directory>/share/cgi-bin/
+#
+# Run the server, by default on the 8080 port 
+# (http://www.yourmachine.org:8080/)
+#
+$prefix/sbin/apachectl start
+#
+# Build DBI
+#
+gtar -zxvf ../src/DBI-1.06.tar.gz 
+cd DBI-1.06
+perl Makefile.PL
+make
+make install
+#
+# Build MD5
+#
+gtar -zxvf ../src/MD5-1.7.tar.gz 
+cd MD5-1.7
+perl Makefile.PL
+make
+make install
+#
+# Build Msql-Mysql-modules-1.2017
+#
+gtar -zxvf ../src/Msql-Mysql-modules-1.2017.tar.gz 
+cd Msql-Mysql-modules-1.2017
+MYSQL_HOME=$HOME/mysql IN_MYSQL_DISTRIBUTION=1 perl Makefile.PL
+make 
+make install
+#
+# Build texi2html
+#
+cp ../src/texi2html $HOME/myperl/bin
+#
+# Edit $HOME/myperl/bin/texi2html and change
+# the first line to $HOME/myperl/bin/perl
+#
+chmod +x $HOME/myperl/bin/texi2html
+#
+# Build Catalog
+# ATTENTION! The chown will fail because you're not root. This is
+# harmless if the HTTP deamon is running with your id.
+#
+gtar -zxvf ../src/Catalog-*.gz
+cd Catalog-*
+mkdir $HOME/myapache/share/htdocs/Catalog
+INFODIR='' HTMLDIR=$HOME/myapache/share/htdocs/Catalog HTMLPATH=/Catalog \
+ CONFIG_DIR='' \
+ CGIDIR=$HOME/myapache/share/cgi-bin CGIPATH=/cgi-bin \
+ USERID=$LOGNAME \
+ AUTH="$LOGNAME:passpass" perl Makefile.PL
+make 
+make test
+make install
+
+--------------------------------------
+
+
+Loic Dachary
+loic@senga.org
+http://www.senga.org/

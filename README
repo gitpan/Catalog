@@ -1,0 +1,45 @@
+$Id: README,v 1.4 1999/02/02 15:24:42 ecila40 Exp $
+
+What is it ?
+------------
+Catalog is a perl program that allows to create, maintain and display
+Yahoo! like directories. The user interface is 100% HTML. It requires an
+SQL database to run (typically MySQL, Msql, Postgres or GNUsql). 
+
+The general idea behind the design of Catalog is that creating a catalog
+is mainly a matter of organizing objects in a structured tree. For
+Catalog the objects are records in a table of the SQL database. 
+The structured tree is a set of tree nodes and relations between these
+nodes. The maintainer of the catalog is in charge of building the tree
+and placing objects in this tree.
+
+Where is the documentation ?
+----------------------------
+
+If you have installed Catalog, it is on your local machine 
+(see the Where is it installed section below). If you didn't
+install Catalog, you can take a look at http://www.senga.org/.
+
+How to install it ?
+-------------------
+See the INSTALL file for installation instructions.
+
+
+Where is it installed ?
+-----------------------
+
+The main program is a file named Catalog that is installed in the
+cgi-bin directory of the HTTP server running on your local machine.
+
+The HTML documentation starts with a file named catalog_toc.html in the
+HTML tree of the HTTP server running on your local machine (the path
+you specified with the HTMLDIR variable when installing Catalog).
+
+
+Where can I download it ?
+-------------------------
+The Catalog home page is http://www.senga.org/download.html
+
+Loic Dachary
+loic@senga.org
+http://www.senga.org/
