@@ -32,6 +32,28 @@ CREATE TABLE urldemo (
   <tablename>urldemo</tablename>
   <name>urltheme</name>
  </Catalog>
+ <Link>
+  <row>3001</row>
+  <category>1</category>
+ </Link>
+ <Link>
+  <row>3002</row>
+  <category>1</category>
+ </Link>
+ <Record table="urldemo">
+  <created>1999-03-22 00:00:00</created>
+  <url>http://www.senga.org/</url>
+  <comment>Senga</comment>
+  <info>active</info>
+  <rowid>3001</rowid>
+ </Record>
+ <Record table="urldemo">
+  <created>1999-03-22 00:00:00</created>
+  <url>http://www.lip6.fr/</url>
+  <comment>Lip6</comment>
+  <info>active</info>
+  <rowid>3002</rowid>
+ </Record>
 
  <Category>
   <externalid>2</externalid>

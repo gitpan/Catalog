@@ -1,6 +1,5 @@
 #
-#   Copyright (C) 1997, 1998
-#   	Free Software Foundation, Inc.
+#   Copyright (C) 1998, 1999 Loic Dachary
 #
 #   This program is free software; you can redistribute it and/or modify it
 #   under the terms of the GNU General Public License as published by the
@@ -17,35 +16,33 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /spare2/ecila-cvsroot/Catalog/lib/Catalog.pm,v 1.35 1999/04/19 12:31:26 ecila40 Exp $
+# $Header: /spare2/ecila-cvsroot/Catalog/lib/Catalog.pm,v 1.43 1999/05/17 10:13:41 ecila40 Exp $
 #
 # 
 package Catalog;
-use vars qw(@ISA $head %default_templates %schema
-	    @tablelist_theme @tablelist_alpha @tablelist_date
+use vars qw(@ISA $head %default_templates
 	    %datemap
-	    $autoinc
 	    $VERSION);
 use strict;
 
 use CGI;
 use CGI::Carp;
-use File::Path;
 use File::Basename;
 use MD5;
+use Catalog::implementation;
 use Catalog::external;
+use Catalog::path qw(path_simplify_component);
 use Catalog::tools::sqledit;
 use Catalog::tools::tools;
 
-@ISA = qw(Catalog::tools::sqledit);
+@ISA = qw(Catalog::tools::sqledit Catalog::implementation);
 
-$VERSION = "0.5";
+$VERSION = "0.9";
 sub Version { $VERSION; }
 
-@tablelist_theme = qw(catalog_entry2category catalog_category catalog_category2category catalog_path);
-@tablelist_alpha = qw(catalog_alpha);
-@tablelist_date = qw(catalog_date);
-
+#
+# Yerk. Change to use Locale::Date or something
+#
 %datemap = (
 	     'french' => {
 		 'days' => {
@@ -77,15 +74,16 @@ $head = "
 <body bgcolor=#ffffff>
 ";
 
+#
+# Built in templates
+#
 %default_templates
     = (
        'error.html' => template_parse('inline error',
 "$head
 <title>Error message</title>
-
-<center>
-<h3>_MESSAGE_</h3>
-</center>
+<H1>Error:</H1>
+<PRE>_MESSAGE_</PRE>
 "),
        'calpha_root.html' => template_parse('inline calpha_root',
 "$head
@@ -180,7 +178,7 @@ Create _NAVIGATION_ catalog on table _TABLES_
 <pre></b><i>
 <font size=-1>
 Catalog-$VERSION <a href=http://www.senga.org/>http://www.senga.org</a>
-Copyright 1998, 1999 Free Software Foundation, Inc.
+Copyright 1998, 1999 Loic Dachary
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -685,336 +683,20 @@ _HIDDEN_
 "),
        );
 
+
 #
-# 3.21 reverse of 3.22 syntax :-(
+# Class specific initialization (called by new)
 #
-if(exists($ENV{'MYSQL_OLD'})) {
-    $autoinc = "not null auto_increment";
-} else {
-    $autoinc = "auto_increment not null";
-}
-
-%schema = (
-		    'catalog' => "
-create table catalog (
-  #
-  # Table management information 
-  #
-  rowid int $autoinc,
-  created datetime not null,
-  modified timestamp not null,
-
-  #
-  # Name of the catalog
-  #
-  name varchar(32) not null,
-  #
-  # Name of the table whose records are catalogued
-  #
-  tablename varchar(60) not null,
-  #
-  # Navigation scheme
-  #
-  navigation enum ('alpha', 'theme', 'date') default 'theme',
-  #
-  # State information
-  #
-  info set ('hideempty'),
-  #
-  # (alpha, date only) last update time
-  #
-  updated datetime,
-  #
-  # Order clause
-  #
-  corder varchar(128),
-  #
-  # Where clause
-  #
-  cwhere varchar(128),
-  #
-  # (alpha, date only) name of the field for sorting
-  #
-  fieldname varchar(60),
-  #
-  # (theme only) rowid of the root in catalog_category_<name>
-  #
-  root int not null,
-  #
-  # (theme only) full path name of the location to dump pages
-  #
-  dump varchar(255),
-  #
-  # (theme only) the location from which the dumped pages will be accessed
-  #
-  dumplocation varchar(255),
-
-  unique catalog1 (rowid),
-  unique catalog2 (name)
-)
-",
-		    'catalog_auth' => "
-create table catalog_auth (
-  #
-  # Table management information 
-  #
-  rowid int $autoinc,
-  created datetime not null,
-  modified timestamp not null,
-
-  #
-  # Yes if entry is usable
-  #
-  active enum ('yes', 'no') default 'no',
-  #
-  # login name of the editor
-  #
-  login char(16) not null,
-
-  unique catalog_auth1 (rowid),
-  unique catalog_auth2 (login)
-)
-",
-		    'catalog_auth_properties' => "
-create table catalog_auth_properties (
-  #
-  # Table management information 
-  #
-  rowid int $autoinc,
-  created datetime not null,
-  modified timestamp not null,
-
-  #
-  # Link to user descriptive entry (catalog_auth)
-  #
-  auth int not null,
-
-  #
-  # Authorization global to catalog
-  #
-
-  #
-  # Allow everything
-  #
-  superuser char(1) not null default 'n',
-
-  #
-  # Authorization bound to a specific catalog
-  #
-
-  #
-  # Name of the catalog on which this entry applies
-  #
-  catalogname varchar(32) not null,
-
-  #
-  # Allow everything on this catalog
-  #
-  catalogsuperuser char(1) not null default 'n',
-
-  #
-  # Authorization on a specific theme category
-  #
-
-  #
-  # Link to the category (catalog_category_NAME) 
-  #
-  categorypointer int not null default 0,
-  #
-  # Allow sub category add/edit/remove
-  #
-  categorysubedit char(1) not null default 'n',
-  #
-  # Allow entries add/edit/remove
-  #
-  categoryentryedit char(1) not null default 'n',
-
-
-  unique catalog_auth_categories1 (rowid),
-  index catalog_auth_categories2 (auth),
-  index catalog_auth_categories3 (catalogname),
-  index catalog_auth_categories4 (categorypointer)
-)
-",
-		    'catalog_entry2category' => "
-create table catalog_entry2category_NAME (
-  #
-  # Table management information 
-  #
-  created datetime not null,
-  modified timestamp not null,
-
-  #
-  # State information
-  #
-  info set ('hidden'),
-  #
-  # Rowid of the record from catalogued table
-  #
-  row int not null,
-  #
-  # Rowid of the category
-  #
-  category int not null,
-  #
-  # External identifier to synchronize with alien catalogs
-  #
-  externalid varchar(32) not null default '',
-
-  index catalog_entry2category_NAME2 (created),
-  index catalog_entry2category_NAME3 (modified),
-  unique catalog_entry2category_NAME4 (row,category),
-  index catalog_entry2category_NAME5 (category),
-  index catalog_entry2category_NAME6 (externalid)
-)
-",
-		    'catalog_category' => "
-create table catalog_category_NAME (
-  #
-  # Table management information 
-  #
-  rowid int $autoinc,
-  created datetime not null,
-  modified timestamp not null,
-
-  #
-  # State information
-  #
-  info set ('root'),
-  #
-  # Full name of the category
-  #
-  name varchar(255) not null,
-  #
-  # Total number of records in this category and bellow
-  #
-  count int default 0,
-  #
-  # External identifier to synchronize with alien catalogs
-  #
-  externalid varchar(32) not null default '',
-
-  unique catalog_category_NAME1 (rowid),
-  index catalog_category_NAME2 (created),
-  index catalog_category_NAME3 (modified),
-  index catalog_category_NAME4 (name(122)),
-  index catalog_category_NAME5 (externalid)
-)
-",
-		    'catalog_path' => "
-create table catalog_path_NAME (
-  #
-  # Full path name of the category
-  #
-  pathname text not null,
-  #
-  # MD5 key of the path name
-  #
-  md5 char(32) not null,
-  #
-  # Full path name translated to ids
-  #
-  path varchar(128) not null,
-  #
-  # Id of the last component
-  #
-  id int not null,
-
-  unique catalog_path_NAME1 (md5),
-  unique catalog_path_NAME2 (path),
-  unique catalog_path_NAME3 (id)
-)
-",
-		    'catalog_alpha' => "
-create table catalog_alpha_NAME (
-  #
-  # Table management information 
-  #
-  rowid int $autoinc,
-  created datetime not null,
-  modified timestamp not null,
-
-  #
-  # The letter
-  #
-  letter char(1) not null,
-  #
-  # Count of records of the catalogued table have
-  # a field starting with this letter.
-  #
-  count int default 0,
-
-  unique catalog_alpha_NAME1 (rowid)
-)
-",
-		    'catalog_date' => "
-create table catalog_date_NAME (
-  #
-  # Table management information 
-  #
-  rowid int $autoinc,
-
-  #
-  # The date interval
-  #
-  tag char(8) not null,
-  #
-  # Count of records of the catalogued table have
-  # a field starting with this letter.
-  #
-  count int default 0,
-
-  unique catalog_date_NAME1 (rowid),
-  unique catalog_date_NAME2 (tag)
-)
-",
-		    'catalog_category2category' => "
-create table catalog_category2category_NAME (
-  #
-  # Table management information 
-  #
-  rowid int $autoinc,
-  created datetime not null,
-  modified timestamp not null,
-
-  #
-  # State information
-  #
-  info set ('hidden', 'symlink'),
-  #
-  # Rowid of father
-  #
-  up int not null,
-  #
-  # Rowid of child
-  #
-  down int not null,
-  #
-  # External identifier to synchronize with alien catalogs
-  #
-  externalid varchar(32) not null default '',
-
-  unique catalog_category2category_NAME1 (rowid),
-  index catalog_category2category_NAME2 (created),
-  index catalog_category2category_NAME3 (modified),
-  unique catalog_category2category_NAME4 (up,down),
-  index catalog_category2category_NAME5 (down),
-  index catalog_category2category_NAME6 (externalid)
-)
-",
-		    
-		    );
-
 sub initialize {
     my($self) = @_;
 
     $self->Catalog::tools::sqledit::initialize();
+    $self->Catalog::implementation::initialize();
 
     my($config) = config_load("catalog.conf");
     %$self = (%$self, %$config) if(defined($config));
 
-    my($encoding) = $self->{'encoding'} || '';
-    $encoding = "ISO-8859-1";
+    my($encoding) = $self->{'encoding'} || "ISO-8859-1";
     $self->{'encoding'} = $encoding;
     
     push(@{$self->{'params'}}, 'name', 'path');
@@ -1022,34 +704,19 @@ sub initialize {
     %$templates = ( %$templates, %default_templates );
 }
 
-sub cinfo {
-    my($self) = @_;
 
-    if(!exists($self->{'ccatalog'})) {
-	my($tables) = $self->tables();
-	my($catalog) = grep(/^catalog$/, @$tables);
-	if(defined($catalog)) {
-	    $self->{'csetup'} = 'yes';
-	    my($rows) = $self->exec_select("select rowid,name,tablename,navigation,info,fieldname,cwhere,corder,unix_timestamp(updated) as updated,root,dump,dumplocation from catalog");
-
-	    if(@$rows) {
-		$self->{'ccatalog'} = { map { $_->{'name'} => $_ } @$rows };
-	    } else {
-		$self->{'ccatalog'} = undef;
-	    }
-	    $self->{'ctables'} = [ grep(!/^catalog/, @$tables) ];
-	}
-    }
-
-    return $self->{'ccatalog'};
-}
-
+#
+# Called after catalog edited/removed/created
+#
 sub cinfo_clear {
     my($self) = @_;
 
     delete($self->{'ccatalog'});
 }
 
+#
+# HTML catalog setup step 1
+#
 sub csetup {
     my($self) = @_;
 
@@ -1057,6 +724,9 @@ sub csetup {
     return $self->stemplate_build($template);
 }
 
+#
+# HTML catalog setup step 2
+#
 sub csetup_confirm {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1069,21 +739,15 @@ sub csetup_confirm {
     }));
 }
 
-sub csetup_api {
-    my($self) = @_;
-
-    $self->exec($schema{'catalog'});
-    $self->exec($schema{'catalog_auth'});
-    $self->exec($schema{'catalog_auth_properties'});
-    $self->cinfo_clear();
-}
-
+#
+# HTML display control panel
+#
 sub ccontrol_panel {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
     my($ccatalog) = $self->cinfo();
     
-    my($url) = $cgi->url('-absolute' => 1);
+    my($url) = $cgi->script_name();
 
     if(!defined($self->{'csetup'})) {
 	return $self->csetup();
@@ -1092,7 +756,7 @@ sub ccontrol_panel {
     my($template) = $self->template("ccontrol_panel");
 
     my($template_catalogs) = $template->{'children'}->{'catalogs'};
-    $self->serror("missing catalogs part") if(!defined($template_catalogs));
+    $self->cerror("missing catalogs part") if(!defined($template_catalogs));
     my($template_theme) = $template_catalogs->{'children'}->{'theme'};
 
     if($ccatalog) {
@@ -1145,6 +809,9 @@ sub ccontrol_panel {
     return $self->stemplate_build($template);
 }
 
+#
+# HTML import XML representation step 1
+#
 sub cimport {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1153,10 +820,15 @@ sub cimport {
     my($assoc) = $template->{'assoc'};
 
     template_set($assoc, '_NAME_', $cgi->param('name'));
+    template_set($assoc, '_PATH_', $cgi->param('path'));
+    template_set($assoc, '_COMMENT_', $cgi->param('comment'));
     
     return $self->stemplate_build($template);
 }
 
+#
+# HTML import XML representation step 2
+#
 sub cimport_confirm {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1164,8 +836,8 @@ sub cimport_confirm {
     my($name) = $cgi->param('name');
     my($file) = $cgi->param('file');
 
-    $self->serror("no file specified") if(!defined($file));
-    $self->serror("$file is not a readable file") if(! -r $file);
+    $self->cerror("no file specified") if(!defined($file));
+    $self->cerror("$file is not a readable file") if(! -r $file);
 
     eval {
 	$self->cimport_api($name, $file);
@@ -1173,7 +845,7 @@ sub cimport_confirm {
     if($@) {
 	my($error) = $@;
 	print STDERR $error;
-	$self->serror("load failed, check logs");
+	$self->cerror("load failed, check logs");
     }
 
     return $self->ccontrol_panel(Catalog::tools::cgi->new({
@@ -1182,13 +854,9 @@ sub cimport_confirm {
     }));
 }
 
-sub cimport_api {
-    my($self, $name, $file) = @_;
-
-    my($external) = Catalog::external->new();
-    $external->load($self, $name, $file);
-}
-
+#
+# HTML export XML representation step 1
+#
 sub cexport {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1201,6 +869,9 @@ sub cexport {
     return $self->stemplate_build($template);
 }
 
+#
+# HTML export XML representation step 2
+#
 sub cexport_confirm {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1208,9 +879,9 @@ sub cexport_confirm {
     my($name) = $cgi->param('name');
     my($file) = $cgi->param('file');
 
-    $self->serror("no file specified") if(!defined($file));
+    $self->cerror("no file specified") if(!defined($file));
     my($dir) = dirname($file);
-    $self->serror("directory $dir is not writable") if(! -w $dir);
+    $self->cerror("directory $dir is not writable") if(! -w $dir);
 
     eval {
 	$self->cexport_api($name, $file);
@@ -1219,7 +890,7 @@ sub cexport_confirm {
     if($@) {
 	my($error) = $@;
 	print STDERR $error;
-	$self->serror("load failed, check logs");
+	$self->cerror("load failed, check logs");
     }
 
     return $self->ccontrol_panel(Catalog::tools::cgi->new({
@@ -1228,13 +899,9 @@ sub cexport_confirm {
     }));
 }
 
-sub cexport_api {
-    my($self, $name, $file) = @_;
-
-    my($external) = Catalog::external->new();
-    $external->unload($self, $name, $file);
-}
-
+#
+# HTML create demo data table
+#
 sub cdemo {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1244,29 +911,11 @@ sub cdemo {
     return $self->ccontrol_panel(Catalog::tools::cgi->new({'context' => 'ccontrol_panel'}));
 }
 
-sub cdemo_api {
-    my($self) = @_;
-
-    $self->serror("The urldemo table already exists") if($self->info_table("urldemo"));
-    my($schema) = "
-create table urldemo (
-  #
-  # Table management information 
-  #
-  rowid int $autoinc,
-  created datetime not null,
-  modified timestamp not null,
-
-  info enum ('active', 'inactive') default 'active',
-  url char(128),
-  comment char(255),
-
-  unique cdemo1 (rowid)
-)
-";
-    $self->exec($schema);
-}
-
+#
+# HTML Create a symbolic link to a category
+# param rowid not set : navigate catalog structure
+# param rowid set : create symlink to rowid
+#
 sub categorysymlink {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1293,24 +942,21 @@ sub categorysymlink {
 	if($@) {
 	    my($error) = $@;
 	    print STDERR $error;
-	    $self->serror("recursive cgi call failed, check logs");
+	    $self->cerror("recursive cgi call failed, check logs");
 	}
 	return $self->cedit($cgi);
     } else {
 	my($name) = $cgi->param('name');
 	$cgi = $cgi->fct_return('context' => 'cedit');
-	#
-	# Link the created category to its parent
-	#
-	$self->insert("catalog_category2category_$name",
-		      'info' => 'hidden,symlink',
-		      'up' => $cgi->param('id'),
-		      'down' => $rowid);
-
+	my($id) = $cgi->param('id');
+	$self->categorysymlink_api($name, $id, $rowid);
 	return $self->cedit($cgi);
     }
 }
 
+#
+# HTML destroy a catalog step 1
+#
 sub cdestroy {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1325,43 +971,23 @@ sub cdestroy {
     return $self->stemplate_build($template);
 }
 
+#
+# HTML destroy a catalog step 2
+#
 sub cdestroy_confirm {
     my($self, $cgi) = @_;
 
     my($name) = $cgi->param('name');
-    $self->cerror($cgi, "no catalog name specified") if(!defined($name));
+    $self->cerror("no catalog name specified") if(!defined($name));
 
     $self->cdestroy_api($name);
 
     return $self->ccontrol_panel(Catalog::tools::cgi->new({'context' => 'ccontrol_panel'}));
 }
 
-sub cdestroy_api {
-    my($self, $name) = @_;
-
-    my($ccatalog) = $self->cinfo();
-
-    if(exists($ccatalog->{$name})) {
-	$self->cdestroy_real($name);
-    }
-}
-
-sub cdestroy_real {
-    my($self, $name) = @_;
-
-    my($tables) = $self->tables();
-
-    my($table);
-    foreach $table (@tablelist_theme, @tablelist_alpha, @tablelist_date) {
-	my($real) = "${table}_$name";
-	if(grep(/^$real$/, @$tables)) {
-	    $self->exec("drop table $real");
-	}
-    }
-    $self->exec("delete from catalog where name = '$name'");
-    $self->cinfo_clear();
-}
-
+#
+# HTML display a category for editing
+#
 sub cedit {
     my($self, $cgi) = @_;
 
@@ -1370,39 +996,10 @@ sub cedit {
     return $self->cedit_1($cgi, \%info);
 }
 
-sub pathcheck {
-    my($self, $name) = @_;
-    my($table) = "catalog_path_$name";
-
-    if(!$self->info_table($table)) {
-	my($schema) = $schema{'catalog_path'};
-	$schema =~ s/NAME/$name/g;
-	$self->exec($schema);
-
-	my($catalog) = $self->cinfo()->{$name};
-	$self->insert($table,
-		      'pathname' => '/',
-		      'md5' => MD5->hexhash('/'),
-		      'path' => ' ',
-		      'id' => $catalog->{'root'});
-	my($func) = sub {
-	    my($id, $name, $pathname, $path) = @_;
-
-	    $pathname = $self->path2url("/$pathname/");
-	    $self->insert($table,
-			  'pathname' => $pathname,
-			  'md5' => MD5->hexhash($pathname),
-			  'path' => ",$path,",
-			  'id' => $id
-			  );
-	    $self->gauge();
-	    return 1;
-	};
-	$self->walk_categories($name, $func);
-	$self->cinfo_clear();
-    }
-}
-
+#
+# HTML display a category specified by the pathname param only
+# Map the pathname to id with catalog_path table.
+#
 sub pathcontext {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1414,32 +1011,26 @@ sub pathcontext {
     my($name) = $cgi->param('name');
     $self->pathcheck($name);
     if(!defined($cgi->param('name'))) {
-	$self->serror("missing name from pathcontext_params in catalog.conf");
+	$self->cerror("missing name from pathcontext_params in catalog.conf");
     }
     if(!exists($ccatalog->{$name})) {
-	$self->serror("the default catalog name, $name (from pathcontext_params in catalog.conf) is
+	$self->cerror("the default catalog name, $name (from pathcontext_params in catalog.conf) is
 not an existing catalog");
     }
     my($catalog) = $ccatalog->{$name};
     if($catalog->{'navigation'} ne 'theme') {
-	$self->serror("pathcontext only valid for theme catalog");
+	$self->cerror("pathcontext only valid for theme catalog");
     }
 
-    my($md5) = MD5->hexhash($pathname);
-    my($row) = $self->exec_select_one("select * from catalog_path_$name where md5 = '$md5'");
-    #
-    # If the path is not found, go to root of catalog
-    #
-    my($id) = defined($row) ? $row->{'id'} : $catalog->{'root'};
-    
-    $cgi->param('id', $id);
     $cgi->param('context', 'cbrowse');
-    $cgi->param('path', $row->{'path'});
     $cgi->param('pathname', $pathname);
     my(%info) = ('mode' => 'cbrowse');
     return $self->cedit_1($cgi, \%info);
 }
 
+#
+# HTML display a catalog (date,alpha,theme)
+#
 sub cbrowse {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1458,6 +1049,9 @@ sub cbrowse {
 
 }
 
+#
+# HTML display an alpha catalog
+#
 sub calpha {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1471,12 +1065,12 @@ sub calpha {
 	my($template) = $self->template($base);
 	my($assoc) = $template->{'assoc'};
 
-	my($rows) = $self->exec_select("select letter,count from catalog_alpha_$name");
-	$rows = { map { $_->{'letter'} => $_->{'count'} } @$rows };
 	my($day) = 24 * 60 * 60;
 	if(($catalog->{'updated'} || 0) < time() - $day) {
-	    $self->calpha_count_1($rows, $catalog->{'tablename'}, $catalog->{'fieldname'});
+	    $self->calpha_count_1_api($name);
 	}
+	my($rows) = $self->db()->exec_select("select letter,count from catalog_alpha_$name");
+	$rows = { map { $_->{'letter'} => $_->{'count'} } @$rows };
 	my($url) = $self->ccall();
 	my($tag);
 	foreach $tag (keys(%$assoc)) {
@@ -1510,12 +1104,15 @@ sub calpha {
 	
 	return $self->stemplate_build($template);
     } else {
-	$self->serror("no entries for this letter in $name") if($letter eq 'none');
+	$self->cerror("no entries for this letter in $name") if($letter eq 'none');
 	return $self->catalog_searcher("calpha", $catalog->{'tablename'}, { 'mode' => 'cbrowse'}, " $catalog->{'fieldname'} like '$letter\%' ", "letter");
 	
     }
 }
 
+#
+# HTML force recalculation of the cached data for alpha catalog
+#
 sub calpha_count {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1525,35 +1122,14 @@ sub calpha_count {
     #
     # Force recalculation at first browsing action
     #
-    $self->update("catalog", "name = '$name'",
-		  'updated' => 0);
+    $self->calpha_count_api($name);
+
     return $self->ccontrol_panel(Catalog::tools::cgi->new({'context' => 'ccontrol_panel'}));
 }
 
-sub calpha_count_1 {
-    my($self, $letters, $table, $field) = @_;
-    my($cgi) = $self->{'cgi'};
-    my($name) = $cgi->param('name');
-    my($catalog) = $self->cinfo()->{$name};
-
-    my($where) = $catalog->{'cwhere'};
-    if(defined($where) && $where !~ /^\s*$/) {
-	$where = "and ($where)";
-    } else {
-	$where = '';
-    }
-
-    my($letter);
-    foreach $letter (keys(%$letters)) {
-	my($count) = $self->exec_select_one("select count(*) as count from $table where $field like '$letter%' $where")->{'count'};
-	$letters->{$letter} = $count;
-	$self->update("catalog_alpha_$name", "letter = '$letter'",
-		      'count' => $count);
-    }
-    $self->update("catalog", "name = '$name'",
-		  'updated' => $self->datetime(time()));
-}
-
+#
+# HTML display a date catalog
+#
 sub cdate {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1566,8 +1142,8 @@ sub cdate {
 
     my($day) = 24 * 60 * 60;
     if((($catalog->{'updated'} || 0) < time() - $day) ||
-       ($self->exec_select_one("select count(*) as count from catalog_date_$name")->{'count'} <= 0)) {
-	$self->cdate_count_1($catalog->{'tablename'}, $catalog->{'fieldname'});
+       ($self->db()->exec_select_one("select count(*) as count from catalog_date_$name")->{'count'} <= 0)) {
+	$self->cdate_count_1_api($name);
     }
 
     #
@@ -1626,6 +1202,9 @@ sub cdate {
     return $self->stemplate_build($template);
 }
 
+#
+# HTML display a data catalog calendar
+#
 sub cdate_index {
     my($self, $template, $interval, $spec, @specs) = @_;
 
@@ -1633,7 +1212,7 @@ sub cdate_index {
     my($cgi) = $self->{'cgi'};
     my($name) = $cgi->param('name');
     my($catalog) = $self->cinfo()->{$name};
-    my($url) = $cgi->url('-absolute' => 1);
+    my($url) = $cgi->script_name();
 
 #    warn("cdate_index " . ostring($interval));
 
@@ -1657,7 +1236,7 @@ sub cdate_index {
     }
     
     my($sql) = "select tag,date_format(concat(tag, '$spec->{'complement'}'), '$format') as ftag,count from catalog_date_$name where length(tag) = $length and tag $interval->{'from_op'} '$from' and tag $interval->{'to_op'} '$to' order by $order";
-    my($rows) = $self->exec_select($sql);
+    my($rows) = $self->db()->exec_select($sql);
 #    warn($sql);
 
     my($assoc) = $template->{'assoc'};
@@ -1688,12 +1267,15 @@ sub cdate_index {
     $template->{'html'} = $html;
 }
 
+#
+# HTML display a date catalog list of records
+#
 sub cdate_records {
     my($self, $template, $interval) = @_;
     my($cgi) = $self->{'cgi'};
     my($name) = $cgi->param('name');
     my($catalog) = $self->cinfo()->{$name};
-    my($url) = $cgi->url('-absolute' => 1);
+    my($url) = $cgi->script_name();
 
     my($from) = $interval->{'from'};
     $from =~ s/^(\d\d\d\d)(\d\d)(\d\d)$/$1-$2-$3 00:00:00/;
@@ -1713,7 +1295,7 @@ sub cdate_records {
     my(%context) = (
 		    'context' => 'catalog entries',
 		    'params' => [ 'from', 'to', 'date', 'index_from', 'index_to', 'index_date', 'records_from', 'records_to', 'records_date', 'template' ],
-		    'url' => $cgi->url('-absolute' => 1),
+		    'url' => $cgi->script_name(),
 		    'page' => scalar($cgi->param('page')),
 		    'page_length' => scalar($cgi->param('page_length')),
 		    'template' => $template,
@@ -1726,6 +1308,9 @@ sub cdate_records {
     return $self->searcher(\%context);
 }
 
+#
+# HTML translate date cgi argument to interval structure
+#
 sub cdate_cgi2intervals {
     my($self, $cgi) = @_;
 
@@ -1776,123 +1361,16 @@ sub cdate_cgi2intervals {
 	     'records' => $params{'records'} );
 }
 
-sub cdate_normalize {
-    my($self, $spec) = @_;
-
-    return if(exists($spec->{'normalized'}));
-
-    my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
-    $mon++;
-
-    if($year < 60) {
-	$year += 2000;
-    } else {
-	$year += 1900;
-    }
-
-    my($now) = sprintf("$year%02d%02d", $mon, $mday);
-    
-    $spec->{'from_op'} = '>=';
-    $spec->{'to_op'} = '<=';
-
-    #
-    # Fill from and to
-    #
-    if($spec->{'date'}) {
-	#
-	# A specific day
-	#
-	$spec->{'from'} = $spec->{'date'};
-	$spec->{'to'} = $spec->{'date'};
-    } else {
-	if(!$spec->{'from'} && !$spec->{'to'}) {
-	    #
-	    # No date specified, default to all
-	    #
-	    $spec->{'from'} = "19700101";
-	    $spec->{'to'} = $now;
-	} elsif($spec->{'from'} && !$spec->{'to'}) {
-	    #
-	    # From a specified date in the paste up to now
-	    #
-	    $spec->{'to'} = $now;
-	} elsif($spec->{'from'} && !$spec->{'to'}) {
-	    #
-	    # From the beginning of type up to the specified date
-	    #
-	    $spec->{'from'} = "19700101";
-	} else {
-	    #
-	    # A specified interval time
-	    #
-	    ;
-	}
-    }
-
-    #
-    # Normalize date spec from 
-    #
-    if($spec->{'from'} =~ /^\d\d\d\d$/) {
-	$spec->{'from'} .= "0101";
-    } elsif($spec->{'from'} =~ /^\d\d\d\d\d\d$/) {
-	$spec->{'from'} .= "01";
-    }
-    #
-    # Normalize date spec to 
-    #
-    if($spec->{'to'} =~ /^\d\d\d\d$/) {
-	$spec->{'to'} .= "1231";
-    } elsif($spec->{'to'} =~ /^(\d\d\d\d)(\d\d)$/) {
-	my($rows) = $self->exec_select("select date_format(date_sub(date_add('$1-$2-01', interval 1 month), interval 1 day), '%Y%m%d') as d");
-	$spec->{'to'} = $rows->[0]->{'d'};
-    }
-
-    $spec->{'normalized'}++;
-
-#    warn("cdate_normalize " . ostring($spec));
-
-    return $spec;
-}
-
-sub cdate_intersection {
-    my($self, $i1, $i2) = @_;
-
-    return {
-	'from' => ($i1->{'from'} > $i2->{'from'} ? $i1->{'from'} : $i2->{'from'}),
-	'to' => ($i1->{'to'} < $i2->{'to'} ? $i1->{'to'} : $i2->{'to'}),
-    };
-}
-
 #
-# At the moment, strictly identical to calpha_count
+# HTML force recalculation of the cached data for date catalog
 #
 sub cdate_count {
     return calpha_count(@_);
 }
 
-sub cdate_count_1 {
-    my($self, $table, $field) = @_;
-    my($cgi) = $self->{'cgi'};
-    my($name) = $cgi->param('name');
-    my($catalog) = $self->cinfo()->{$name};
-
-    my($where) = $catalog->{'cwhere'};
-    if(defined($where) && $where !~ /^\s*$/) {
-	$where = "where $where";
-    } else {
-	$where = '';
-    }
-
-    $self->exec("delete from catalog_date_$name");
-
-    $self->exec("insert into catalog_date_$name (tag, count) select date_format($field, '%Y') as yyyy, count(rowid) from $table $where group by yyyy order by yyyy");
-    $self->exec("insert into catalog_date_$name (tag, count) select date_format($field, '%Y%m') as yyyymm, count(rowid) from $table $where group by yyyymm order by yyyymm");
-    $self->exec("insert into catalog_date_$name (tag, count) select date_format($field, '%Y%m%d') as yyyymmdd, count(rowid) from $table $where group by yyyymmdd order by yyyymmdd");
-
-    $self->update("catalog", "name = '$name'",
-		  'updated' => $self->datetime(time()));
-}
-
+#
+# HTML recalculate counts for each category
+#
 sub category_count {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1902,42 +1380,9 @@ sub category_count {
     return $self->ccontrol_panel(Catalog::tools::cgi->new({'context' => 'ccontrol_panel'}));
 }
 
-sub category_count_api {
-    my($self, $name) = @_;
-
-    my($catalog) = $self->cinfo()->{$name};
-    my($where) = $catalog->{'cwhere'};
-    if(defined($where) && $where !~ /^\s*$/) {
-	$where = "and ($where)";
-    } else {
-	$where = '';
-    }
-
-    $self->update("catalog_category_$name", "",
-		  'count' => 0);
-    $self->category_count_1($name, $where, $catalog->{'tablename'}, $catalog->{'root'});
-}
-
-sub category_count_1 {
-    my($self, $name, $where, $table, $id) = @_;
-
-    my($count) = $self->exec_select_one("select count(*) from $table, catalog_entry2category_$name where ($table.rowid = catalog_entry2category_$name.row and catalog_entry2category_$name.category = $id) $where")->{'count(*)'};
-
-    dbg("found $count entries at id $id", "catalog");
-
-    my($rows) = $self->exec_select("select a.rowid from catalog_category_$name as a, catalog_category2category_$name as b where a.rowid = b.down and b.up = $id");
-    my($row);
-    foreach $row (@$rows) {
-	$count += $self->category_count_1($name, $where, $table, $row->{'rowid'});
-	$self->gauge();
-    }
-
-    $self->update("catalog_category_$name", "rowid = $id",
-		  'count' => $count);
-    
-    return $count;
-}
-
+#
+# HTML search categories and records (SQL style)
+#
 sub csearch {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -1947,7 +1392,7 @@ sub csearch {
     my($catalog) = $ccatalog->{$name};
     my($navigation) = $catalog->{'navigation'};
 
-    $self->serror("%s catalog cannot be searched", $navigation) if($navigation ne 'theme');
+    $self->cerror("%s catalog cannot be searched", $navigation) if($navigation ne 'theme');
 
     my($what) = $cgi->param('what');
     my($mode) = $cgi->param('mode') || 'cbrowse';
@@ -1965,9 +1410,9 @@ sub csearch {
     # Search in categories
     #
     my($template_categories) = $template->{'children'}->{'categories'};
-    $self->serror("missing categories part") if(!defined($template_categories));
+    $self->cerror("missing categories part") if(!defined($template_categories));
     my($template_nocategories) = $template->{'children'}->{'nocategories'};
-    $self->serror("missing nocategories part") if(!defined($template_nocategories));
+    $self->cerror("missing nocategories part") if(!defined($template_nocategories));
     if(defined($select_category)) {
 	my($layout) = sub {
 	    my($template, $subname, $result, $context) = @_;
@@ -1984,7 +1429,7 @@ sub csearch {
 		my($url);
 		if($mode eq 'pathcontext') {
 		    my($pathname) = $row->{'pathname'};
-		    $url = $cgi->url('-absolute' => 1) . $pathname;
+		    $url = $cgi->script_name() . $pathname;
 		} else {
 		    my($path) = $row->{'path'};
 		    $path =~ s/^,(.*),$/$1/o;
@@ -2003,7 +1448,7 @@ sub csearch {
 	};
 	my(%context) = (
 			'params' => [ 'text', 'what', 'mode' ],
-			'url' => $cgi->url('-absolute' => 1),
+			'url' => $cgi->script_name(),
 			'page' => scalar($cgi->param('page')),
 			'page_length' => scalar($cgi->param('page_length')),
 			'context' => 'catalog search categories',
@@ -2041,9 +1486,9 @@ sub csearch {
     # Search in records, if no category found
     #
     my($template_records) = $template->{'children'}->{'records'};
-    $self->serror("missing records part") if(!defined($template_records));
+    $self->cerror("missing records part") if(!defined($template_records));
     my($template_norecords) = $template->{'children'}->{'norecords'};
-    $self->serror("missing norecords part") if(!defined($template_norecords));
+    $self->cerror("missing norecords part") if(!defined($template_norecords));
     if($results_count <= 0 && defined($select_records)) {
 	my($catalog) = $self->cinfo()->{$name};
 	my($table) = $catalog->{'tablename'};
@@ -2058,7 +1503,7 @@ sub csearch {
 #	    warn("result_key = @result_key, $row->{'pathname'}");
 	    
 	    my($template_category) = $template->{'children'}->{'category'};
-	    $self->serror("missing records/category part") if(!defined($template_category));
+	    $self->cerror("missing records/category part") if(!defined($template_category));
 	    if($row->{'pathname'} ne $current_pathname) {
 		$current_pathname = $row->{'pathname'};
 		my($assoc) = $template_category->{'assoc'};
@@ -2069,7 +1514,7 @@ sub csearch {
 		    my($url);
 		    if($mode eq 'pathcontext') {
 			my($pathname) = $row->{'pathname'};
-			$url = $cgi->url('-absolute' => 1) . $pathname;
+			$url = $cgi->script_name() . $pathname;
 		    } else {
 			my($path) = $row->{'path'};
 			$path =~ s/^,(.*),$/$1/o;
@@ -2090,7 +1535,7 @@ sub csearch {
 	};
 	my(%context) = (
 			'params' => [ 'text', 'what', 'mode' ],
-			'url' => $cgi->url('-absolute' => 1),
+			'url' => $cgi->script_name(),
 			'page' => scalar($cgi->param('page')),
 			'page_length' => scalar($cgi->param('page_length')),
 			'context' => 'catalog search records',
@@ -2138,24 +1583,9 @@ sub csearch {
     return $self->stemplate_build($template);
 }
 
-sub string2words {
-    my($self, $string) = @_;
-
-    my(@words);
-    if(!exists($self->{'encoding'}) ||
-       $self->{'encoding'} =~ /^iso-latin/io ||
-       $self->{'encoding'} =~ /^iso-8859/io) {
-	while($string =~ /([a-z0-9\200-\376-]+)/oig) {
-	    my($word) = lc($1);
-	    $word =~ s/([a-z])/\[$1\u$1\]/g;
-	    push(@words, $word);
-	}
-    } else {
-	@words = split(' ', $string);
-    }
-    return @words;
-}
-
+#
+# HTML translate cgi parameters to select order for search
+#
 sub csearch_param2select {
     my($self, $what) = @_;
     my($cgi) = $self->{'cgi'};
@@ -2180,25 +1610,28 @@ sub csearch_param2select {
     }
 }
 
+#
+# HTML translate cgi parameters to select order for searching records
+#
 sub csearch_param2select_records {
     my($self, $name, $boolean, $words, @words) = @_;
 
     my($catalog) = $self->cinfo()->{$name};
     my($table) = $catalog->{'tablename'};
-    my($table_info) = $self->info_table($table);
+    my($table_info) = $self->db()->info_table($table);
     my($primary_key) = $table_info->{'_primary_'};
     my($spec) = $self->{'search'}->{$name};
 
     my(@fields);
     if(defined($spec) && exists($spec->{'searched'})) {
 	@fields = split(',', $spec->{'searched'});
-	$self->serror("no searched fields specified in catalog.conf") if(!@fields);
+	$self->cerror("no searched fields specified in catalog.conf") if(!@fields);
     } else {
 	my($field, $info);
 	while(($field, $info) = each(%$table_info)) {
 	    push(@fields, $field) if(ref($info) eq 'HASH' && $info->{'type'} eq 'char');
 	}
-	$self->serror("no char fields in $table") if(!@fields);
+	$self->cerror("no char fields in $table") if(!@fields);
     }
 
     my($fields_extracted) = '';
@@ -2207,7 +1640,7 @@ sub csearch_param2select_records {
     } else {
 	$fields_extracted = "$table.*";
     }
-    $self->serror("no extracted fields for $table") if($fields_extracted =~ /^\s*$/);
+    $self->cerror("no extracted fields for $table") if($fields_extracted =~ /^\s*$/);
 
     my($where) = '';
     my($field);
@@ -2235,6 +1668,9 @@ sub csearch_param2select_records {
     return $select;
 }
 
+#
+# HTML translate cgi parameters to select order for searching categories
+#
 sub csearch_param2select_categories {
     my($self, $name, $boolean, $words, @words) = @_;
 
@@ -2255,6 +1691,9 @@ sub csearch_param2select_categories {
     return $select;
 }
 
+#
+# HTML dump theme catalog in file tree step 1
+#
 sub cdump {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -2263,7 +1702,7 @@ sub cdump {
     my($name) = $cgi->param('name');
     my($catalog) = $ccatalog->{$name};
     my($navigation) = $catalog->{'navigation'};
-    $self->serror("%s catalog cannot be dumped", $navigation) if($navigation ne 'theme');
+    $self->cerror("%s catalog cannot be dumped", $navigation) if($navigation ne 'theme');
 
     my($template) = $self->template('cdump');
     my($assoc) = $template->{'assoc'};
@@ -2276,67 +1715,67 @@ sub cdump {
     return $self->stemplate_build($template);
 }
 
+#
+# HTML dump theme catalog in file tree step 2
+#
 sub cdump_confirm {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
 
     my($path) = $cgi->param('path');
-    $self->serror("you must specify the full path name of a writable directory") if(! -d $path || ! -w $path);
-    $path =~ s:/$::o;
+    $self->cerror("you must specify a path") if(!$path);
     my($location) = $cgi->param('location');
-    $self->serror("you must specify a location") if(!$location);
+    $self->cerror("you must specify a location") if(!$location);
     my($name) = $cgi->param('name');
-    $self->update("catalog", "name = '$name'",
-		  'dump' => $path,
-		  'dumplocation' => $location);
-    
-    system("rm -fr $path/*");
 
     my($script) = $ENV{'SCRIPT_NAME'};
     $ENV{'SCRIPT_NAME'} = $location;
-    my($rows) = $self->exec_select("select pathname from catalog_path_$name");
-    my($row);
-    foreach $row (@$rows) {
-	my($html) = $self->pathcontext(Catalog::tools::cgi->new({
-	    'context' => 'pathcontext',
-	    'pathname' => $row->{'pathname'},
-	}));
-	my($dir) = "$path$row->{'pathname'}";
-	mkpath($dir);
-	my($file) = "${dir}index.html";
-	open(FILE, ">$file") or error("cannot open $file for writing : $!");
-	print FILE $html;
-	close(FILE);
-	$self->gauge();
-    }
+
+    $self->cdump_api($name, $path, sub { $self->cdump_category_layout(@_) });
+    
     if(defined($script)) {
 	$ENV{'SCRIPT_NAME'} = $script;
     } else {
 	delete($ENV{'SCRIPT_NAME'});
     }
-    
+
     return $self->ccontrol_panel(Catalog::tools::cgi->new({
 	'context' => 'ccontrol_panel',
 	'comment' => 'The catalog has been dumped'
     }));
 }
 
+#
+# HTML dump theme catalog layout of a category
+#
+sub cdump_category_layout {
+    my($self, $pathname) = @_;
+
+    $self->gauge();
+    return $self->pathcontext(Catalog::tools::cgi->new({
+	'context' => 'pathcontext',
+	'pathname' => $pathname,
+    }));
+}
+
+#
+# HTML display category for editing or browsing (subroutine)
+#
 sub cedit_1 {
     my($self, $cgi, $info) = @_;
     $self->{'cgi'} = $cgi;
     my($ccatalog) = $self->cinfo();
 
-    my($id) = $cgi->param('id');
     my($name) = $cgi->param('name');
-    my($catalog) = $ccatalog->{$name};
+    my($catalog) = $ccatalog->{$name}
+	    || $self->cerror("Can't edit unknown catalog '%s'", $name);
     my($navigation) = $catalog->{'navigation'};
-    $self->serror("%s catalog cannot be edited", $navigation) if($navigation ne 'theme');
+    $self->cerror("A %s catalog cannot be edited", $navigation) if($navigation ne 'theme');
     $self->pathcheck($name);
-    my($root) = $catalog->{'root'};
-    if(!defined($id)) {
-	$id = $root;
-    }
-    my($category) = $self->exec_select_one("select * from catalog_category_$name where rowid = $id");
+    my($opath) = $self->cgi2path();
+    my($id) = $opath->id();
+
+    my($category) = $self->db()->exec_select_one("select * from catalog_category_$name where rowid = $id");
 
     #
     # Load template
@@ -2356,11 +1795,9 @@ sub cedit_1 {
     #
     template_set($assoc, '_COMMENT_', $cgi->param('comment'));
     #
-    # Category path
+    # Path substitution
     #
-    if(exists($assoc->{'_PATH_'})) {
-	$assoc->{'_PATH_'} = $self->cpath();
-    }
+    $opath->ptemplate_set($template);
     #
     # Hidden parameters
     #
@@ -2377,7 +1814,7 @@ sub cedit_1 {
     #
     # Context
     #
-    template_set($assoc, '_CONTEXT_', $cgi->param('pathname') ? 'pathcontext' : $cgi->param('context'));
+    template_set($assoc, '_CONTEXT_', $opath->fashion() eq 'intuitive' ? 'pathcontext' : $cgi->param('context'));
     if($info->{'mode'} eq 'cedit') {
 	template_set($assoc, '_CONTROLPANEL_', $self->ccall('context' => 'ccontrol_panel',
 							    'id' => undef,
@@ -2411,9 +1848,9 @@ sub cedit_1 {
     if(exists($template->{'children'}->{'entry'}) ||
        exists($template->{'children'}->{'row'})) {
 	my($table) = $self->cinfo()->{$name}->{'tablename'};
-	my($rows) = $self->exec_select("select $table.rowid from $table, catalog_entry2category_$name where $table.rowid = catalog_entry2category_$name.row and catalog_entry2category_$name.category = $id");
-	if(@$rows) {
-	    $self->cedit_searcher($template, $table, $info, join(',', map { $_->{'rowid'} } @$rows));
+	my($row_ids) = $self->select_entry_rows($name, $id); # can subclass to filter
+	if(@$row_ids) {
+	    $self->cedit_searcher($template, $table, $info, join(',', @$row_ids));
 	} else {
 	    $template->{'children'}->{'entry'}->{'skip'} = 1;
 	    $template->{'children'}->{'row'}->{'skip'} = 1;
@@ -2429,6 +1866,9 @@ sub cedit_1 {
     return $self->stemplate_build($template);
 }
 
+#
+# HTML display sub-categories of a category for editing/display
+#
 sub category_searcher {
     my($self, $template, $id, $info, $current_category) = @_;
     my($cgi) = $self->{'cgi'};
@@ -2494,10 +1934,13 @@ sub category_searcher {
     return $self->searcher(\%context);
 }
 
+#
+# HTML display records of a category for editing/display
+#
 sub cedit_searcher {
     my($self, $template, $table, $info, $primary_values) = @_;
 
-    my($info_table) = $self->info_table($table);
+    my($info_table) = $self->db()->info_table($table);
     my($primary_key) = $info_table->{'_primary_'};
 
     my($where) = "$table.$primary_key in ($primary_values)";
@@ -2505,11 +1948,15 @@ sub cedit_searcher {
     return $self->catalog_searcher($template, $table, $info, $where, 'id');
 }
 
+#
+# HTML display records for editing/display
+# Common function for date/alpha/theme catalogs
+#
 sub catalog_searcher {
     my($self, $template, $table, $info, $where, $param) = @_;
     my($cgi) = $self->{'cgi'};
 
-    my($info_table) = $self->info_table($table);
+    my($info_table) = $self->db()->info_table($table);
     my($primary_key) = $info_table->{'_primary_'};
 
     #
@@ -2525,7 +1972,7 @@ sub catalog_searcher {
     my(%context) = (
 		    'context' => 'catalog entries',
 		    'params' => [ $param ],
-		    'url' => $cgi->url('-absolute' => 1),
+		    'url' => $cgi->script_name(),
 		    'page' => scalar($cgi->param('page')),
 		    'page_length' => scalar($cgi->param('page_length')),
 		    'template' => $template,
@@ -2538,13 +1985,17 @@ sub catalog_searcher {
     return $self->searcher(\%context);
 }
 
+#
+# HTML callback of sqledit function searcher : add links to actions
+# depending on the context of the search.
+#
 sub searcher_links {
     my($self, $table, $row, $context) = @_;
 
     my($imagespath) = "$self->{'htmlpath'}/images";
     my($cgi) = $self->{'cgi'};
     my($name) = $cgi->param('name');
-    my($url) = $cgi->url(-absolute => 1);
+    my($url) = $cgi->script_name();
     if($context->{'context'} eq 'catalog categories') {
 	my($id) = $cgi->param('id');
 	my($issymlink);
@@ -2568,7 +2019,7 @@ sub searcher_links {
 	}
 	return $html;
     } elsif($context->{'context'} eq 'catalog entries') {
-	my($info) = $self->info_table($table);
+	my($info) = $self->db()->info_table($table);
 	my($primary_key) = $info->{'_primary_'};
 	my($id) = $cgi->param('id');
 	my($html);
@@ -2592,191 +2043,35 @@ sub searcher_links {
     }
 }
 
-sub cpath {
-    my($self) = @_;
-    my($cgi) = $self->{'cgi'};
-
-    my($path) = $cgi->param('path');
-    my($id) = $cgi->param('id');
-    my($name) = $cgi->param('name');
-    my($pathname) = $cgi->param('pathname');
-
-    my($url);
-    if(defined($pathname)) {
-	$url = $self->{'cgi'}->url(-absolute => 1);
-    } else {
-	$url = $self->ccall(path => undef, id => undef);
-    }
-
-    return $self->cpath2html($name, $id, $path, $url, undef, $pathname);
-}
+#sub crowid2categories {
+#    my($self, $name, $rowid, $url) = @_;
+#
+#    my($category2entry) = "catalog_entry2category_$name";
+#    my($category) = "catalog_category_$name";
+#    my($rows) = $self->db()->exec_select("select a.rowid,a.name from $category as a,$category2entry as b where b.row = $rowid and b.category = a.rowid");
+#    my(@categories);
+#    my($row);
+#    foreach $row (@$rows) {
+#	push(@categories, "<a href=$url&id=$row->{'rowid'}>$row->{'name'}</a>");
+#    }
+#    return (@categories ? \@categories : undef);
+#}
 
 #
-# Return the list of html path where a given record is stored
+# HTML walk records of a theme catalog, call $func on each record
 #
-sub crowid2paths {
-    my($self, $name, $rowid, $url) = @_;
-
-    my($category2entry) = "catalog_entry2category_$name";
-    my($rows) = $self->exec_select("select category from $category2entry where row = $rowid");
-    my(@paths);
-    my($row);
-    foreach $row (@$rows) {
-	push(@paths, $self->cpath2html($name, $row->{'category'}, undef, $url, 'including'));
-    }
-    return (@paths ? \@paths : undef);
-}
-
-sub crowid2categories {
-    my($self, $name, $rowid, $url) = @_;
-
-    my($category2entry) = "catalog_entry2category_$name";
-    my($category) = "catalog_category_$name";
-    my($rows) = $self->exec_select("select a.rowid,a.name from $category as a,$category2entry as b where b.row = $rowid and b.category = a.rowid");
-    my(@categories);
-    my($row);
-    foreach $row (@$rows) {
-	push(@categories, "<a href=$url&id=$row->{'rowid'}>$row->{'name'}</a>");
-    }
-    return (@categories ? \@categories : undef);
-}
-
-sub cpath2html {
-    my($self, $name, $id, $path, $url, $including, $pathname) = @_;
-
-    my($catalog) = $self->cinfo()->{$name};
-    my($category) = "catalog_category_$name";
-    my($root) = $catalog->{'root'};
-
-    if(!defined($path) || $path eq '') {
-	$path = $self->cid2path($name, $id);
-    }
-    return undef if(!defined($path) || $path eq '');
-    
-    $path .= ",$id" if($including);
-    my($html) = '';
-    my($root_label) = $self->{'path_root_label'} || 'root';
-    my($sep) = $self->{'path_separator'} || ':';
-
-    if(defined($pathname)) {
-	$html .= "<a href=$url/>$root_label</a>$sep";
-
-	my($new_path) = '/';
-	my(@names) = split('/', substr($pathname, 1, -1));
-	my($count) = scalar(@names);
-	my($i) = 1;
-	foreach $name (@names) {
-	    my($printed_name) = $name;
-	    $printed_name =~ s/_/ /go;
-	    $new_path .= "$name/";
-	    if($i >= $count) {
-		$html .= "$printed_name";
-	    } else {
-		$html .= "<a href=$url$new_path>$printed_name</a>$sep";
-	    }
-	    $i++;
-	}
-    } else {
-	$html .= "<a href=$url&id=$root>$root_label</a>$sep";
-
-	my($rows) = $self->exec_select("select rowid,name from $category where rowid in ( $path )");
-	$rows = { map { $_->{'rowid'} => $_ } @$rows };
-
-	my($new_path) = '';
-	my($rowid);
-	my(@path) = split(',', $path);
-	my($last) = $path[$#path];
-	foreach $rowid (@path) {
-	    my($row) = $rows->{$rowid};
-	    $new_path .= "$rowid";
-	    if($rowid eq $last) {
-		$html .= "$row->{'name'}";
-	    } else {
-		$html .= "<a href=$url&id=$row->{'rowid'}&path=$new_path>$row->{'name'}</a>$sep";
-	    }
-	    $new_path .= ",";
-	}
-    }
-    return $html;
-}
-
-sub cid2path {
-    my($self, $name, $id) = @_;
-
-    my($catalog) = $self->cinfo()->{$name};
-    my($root) = $catalog->{'root'};
-    my($category2category) = "catalog_category2category_$name";
-
-    my(@path);
-    while($id ne $root) {
-	push(@path, $id);
-	$id = $self->exec_select_one("select up from $category2category where down = $id")->{'up'};
-    }
-
-    return join(',', reverse(@path));
-}
-
 sub walk {
     my($self, $func, @ids) = @_;
     
     my($cgi) = $self->{'cgi'};
 
     my($name) = $cgi->param('name');
-    if(!@ids) {
-	my($catalog) = $self->cinfo()->{$name};
-	push(@ids, $catalog->{'root'});
-    }
 
-    my($id);
-    foreach $id (@ids) {
-	$self->walk_1($func, $name, $id);
-    }
-}
-
-sub walk_1 {
-    my($self, $func, $name, $id) = @_;
-
-    my($rows) = $self->exec_select("select row from catalog_entry2category_$name where catalog_entry2category_$name.category = $id");
-    my($row);
-    foreach $row (@$rows) {
-	return if(!&$func($row->{'row'}));
-    }
-
-    ($rows) = $self->exec_select("select a.rowid from catalog_category_$name as a, catalog_category2category_$name as b where a.rowid = b.down and b.up = $id");
-
-    foreach $row (@$rows) {
-	$self->walk_1($func, $name, $row->{'rowid'});
-    }
-}
-
-sub walk_categories {
-    my($self, $name, $func) = @_;
-    
-    my($cgi) = $self->{'cgi'};
-
-    my($catalog) = $self->cinfo()->{$name};
-    my($id) = $catalog->{'root'};
-
-    $self->walk_categories_1($func, $name, $id);
-}
-
-sub walk_categories_1 {
-    my($self, $func, $name, $id, $path, $pathid) = @_;
-
-    my($rows) = $self->exec_select("select a.rowid,a.name from catalog_category_$name as a, catalog_category2category_$name as b where a.rowid = b.down and b.up = $id and (b.info is null or not find_in_set('symlink', b.info))");
-
-    my($row);
-    foreach $row (@$rows) {
-	my($path_tmp) = $path ? "$path/$row->{'name'}" : $row->{'name'};
-	my($pathid_tmp) = $pathid ? "$pathid,$row->{'rowid'}" : $row->{'rowid'};
-	
-	return if(!&$func($row->{'rowid'}, $row->{'name'}, $path_tmp, $pathid_tmp));
-	$self->walk_categories_1($func, $name, $row->{'rowid'}, $path_tmp, $pathid_tmp);
-    }
+    $self->walk_api($name, $func, @ids);
 }
 
 #
-# Fill template with specified categories
+# HTML fill template with specified categories
 #
 sub category_display {
     my($self, $template, $ids) = @_;
@@ -2806,127 +2101,97 @@ sub category_display {
     return $self->searcher(\%context);
 }
 
-sub category_rows {
-    my($self, $template, $rows, $info) = @_;
+#sub category_rows {
+#    my($self, $template, $rows, $info) = @_;
+#
+#    if(@$rows <= 0) {
+#	$template->{'skip'} = 1;
+#	return;
+#    }
+#    
+#    my($html) = '';
+#    my($params) = $template->{'params'};
+#    if(!exists($params->{'style'}) || $params->{'style'} eq 'list') {
+#	my($template_entry) = $template->{'children'}->{'entry'};
+#
+#	my($row);
+#	foreach $row (@$rows) {
+#	    $html .= $self->category_row($template_entry, $row, $info);
+#	}
+#	$template_entry->{'html'} = $html;
+#    } elsif($params->{'style'} eq 'table') {
+#	my($template_row) = $template->{'children'}->{'row'};
+#	my($template_entry) = $template_row->{'children'}->{'entry'};
+#	my($count_max) = $params->{'columns'} || 5;
+#	my($count) = 0;
+#	my($columns) = '';
+#	my($row);
+#	foreach $row (@$rows) {
+#	    if($count >= $count_max) {
+#		$template_entry->{'html'} = $columns;
+#		$html .= $self->stemplate_build($template_row);
+#		$columns = '';
+#		$count = 0;
+#	    }
+#	    $count++;
+#	    $columns .= $self->category_row($template_entry, $row, $info);
+#	}
+#	if($count > 0) {
+#	    $template_entry->{'html'} = $columns;
+#	    $html .= $self->stemplate_build($template_row);
+#	}
+#	$template_row->{'html'} = $html;
+#    } else {
+#	croak("unknown style $params->{'style'}");
+#    }
+#}
+#
+#sub category_row {
+#    my($self, $template, $row, $info) = @_;
+#    my($cgi) = $self->{'cgi'};
+#
+#    my($assoc) = $template->{'assoc'};
+#    template_set($assoc, '_NAME_', $row->{'name'});
+#    template_set($assoc, '_ROWID_', $row->{'rowid'});
+#    if(exists($assoc->{'_URL_'})) {
+#	my($path) = $cgi->param('path');
+#	my($url) = $self->ccall('context' => $info->{'mode'},
+#				'id' => $row->{'rowid'},
+#				'path' => join(',', ($path || ()), $row->{'rowid'}));
+#	$assoc->{'_URL_'} = $url;
+#    }
+#    if(defined($row->{'info'}) && $row->{'info'} =~ /symlink/) {
+#	template_set($assoc, '_COUNT_', '@');
+#    } else {
+#	template_set($assoc, '_COUNT_', $row->{'count'});
+#    }
+#
+#    return $self->stemplate_build($template);
+#}
 
-    if(@$rows <= 0) {
-	$template->{'skip'} = 1;
-	return;
-    }
-    
-    my($html) = '';
-    my($params) = $template->{'params'};
-    if(!exists($params->{'style'}) || $params->{'style'} eq 'list') {
-	my($template_entry) = $template->{'children'}->{'entry'};
-
-	my($row);
-	foreach $row (@$rows) {
-	    $html .= $self->category_row($template_entry, $row, $info);
-	}
-	$template_entry->{'html'} = $html;
-    } elsif($params->{'style'} eq 'table') {
-	my($template_row) = $template->{'children'}->{'row'};
-	my($template_entry) = $template_row->{'children'}->{'entry'};
-	my($count_max) = $params->{'columns'} || 5;
-	my($count) = 0;
-	my($columns) = '';
-	my($row);
-	foreach $row (@$rows) {
-	    if($count >= $count_max) {
-		$template_entry->{'html'} = $columns;
-		$html .= $self->stemplate_build($template_row);
-		$columns = '';
-		$count = 0;
-	    }
-	    $count++;
-	    $columns .= $self->category_row($template_entry, $row, $info);
-	}
-	if($count > 0) {
-	    $template_entry->{'html'} = $columns;
-	    $html .= $self->stemplate_build($template_row);
-	}
-	$template_row->{'html'} = $html;
-    } else {
-	croak("unknown style $params->{'style'}");
-    }
-}
-
-sub category_row {
-    my($self, $template, $row, $info) = @_;
-    my($cgi) = $self->{'cgi'};
-
-    my($assoc) = $template->{'assoc'};
-    template_set($assoc, '_NAME_', $row->{'name'});
-    template_set($assoc, '_ROWID_', $row->{'rowid'});
-    if(exists($assoc->{'_URL_'})) {
-	my($path) = $cgi->param('path');
-	my($url) = $self->ccall('context' => $info->{'mode'},
-				'id' => $row->{'rowid'},
-				'path' => join(',', ($path || ()), $row->{'rowid'}));
-	$assoc->{'_URL_'} = $url;
-    }
-    if(defined($row->{'info'}) && $row->{'info'} =~ /symlink/) {
-	template_set($assoc, '_COUNT_', '@');
-    } else {
-	template_set($assoc, '_COUNT_', $row->{'count'});
-    }
-
-    return $self->stemplate_build($template);
-}
-
-sub ccount {
-    my($self, $rowid, $increment) = @_;
-    my($cgi) = $self->{'cgi'};
-    my($name) = $cgi->param('name');
-
-#    warn("update catalog_category_$name set count = count $increment where rowid = $rowid");
-    $self->update("catalog_category_$name", "rowid = $rowid",
-		  '+= count' => $increment);
-
-    my($rows) = $self->exec_select("select a.rowid from catalog_category_$name as a, catalog_category2category_$name as b where a.rowid = b.up and b.down = $rowid and (b.info is null or not find_in_set('symlink', b.info))");
-    my($row);
-    foreach $row (@$rows) {
-	$self->ccount($row->{'rowid'}, $increment);
-    }
-}
-
+#
+# HTML remove an empty category
+#
 sub categoryremove {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
 
     my($name) = $cgi->param('name');
     my($id) = $cgi->param('child');
+    my($parent) = $cgi->param('id');
     my($symlink) = $cgi->param('symlink');
-    my($category) = "catalog_category_$name";
-    my($category2category) = "catalog_category2category_$name";
-    my($entry2category) = "catalog_entry2category_$name";
-    my($row) = $self->exec_select_one("select * from $category where rowid = $id");
-    #
-    # Sanity checks
-    #
-    $self->serror("no category found for id = $id") if(!defined($row));
-    if(!defined($symlink)) {
-	$self->serror("category has sub categories") if($self->exec_select_one("select down from $category2category where up = $id"));
-	$self->serror("category is not empty") if($row->{'count'} > 0);
-	$self->serror("entries are still linked to this category") if($self->exec_select_one("select row from $entry2category where category = $id"));
-    }
 
-    #
-    # Effective deletion
-    #
-    if(!defined($symlink)) {
-	$self->mdelete($category, "rowid = $id");
-	$self->mdelete($category2category, "down = $id");
-	$self->mdelete("catalog_path_$name", "id = $id");
-    } else {
-	my($parent) = $cgi->param('id');
-	$self->mdelete($category2category, "down = $id and up = $parent");
-    }
+    $self->categoryremove_api($name, $parent, $id, $symlink);
 
     $cgi->param('context', 'cedit');
     return $self->cedit($cgi);
 }
 
+#
+# HTML Create a subcategory
+# param rowid not set : ask for category name
+# param rowid set : create the category
+#
 sub categoryinsert {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -2954,7 +2219,7 @@ sub categoryinsert {
 	if($@) {
 	    my($error) = $@;
 	    print STDERR $error;
-	    $self->serror("recursive cgi call failed, check logs");
+	    $self->cerror("recursive cgi call failed, check logs");
 	}
 	return $self->insert_form($cgi);
     } else {
@@ -2971,36 +2236,9 @@ sub categoryinsert {
     
 }
 
-sub categoryinsert_api {
-    my($self, $name, $up_id, $down_id) = @_;
-
-    $self->insert("catalog_category2category_$name",
-		  'info' => 'hidden',
-		  'up' => $up_id,
-		  'down' => $down_id);
-    #
-    # Create the path entry
-    #
-    my($down_category) = $self->exec_select_one("select rowid,name from catalog_category_$name where rowid = $down_id");
-    my($up_path) = $self->exec_select_one("select * from catalog_path_$name where id = $up_id");
-    my($pathname) = "$up_path->{'pathname'}$down_category->{'name'}/";
-    $pathname = $self->path2url($pathname);
-    my($path) = $up_path->{'path'} ? "$up_path->{'path'}$down_category->{'rowid'}," : ",$down_category->{'rowid'},";
-    $self->insert("catalog_path_$name",
-		  'pathname' => $pathname,
-		  'md5' => MD5->hexhash($pathname),
-		  'path' => $path,
-		  'id' => $down_category->{'rowid'}
-		  );
-}
-
-sub path2url {
-    my($self, $string) = @_;
-
-    $string =~ s/[ \'\"]/_/og;
-    return $string;
-}
-
+#
+# HTML edit the category record
+#
 sub categoryedit {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -3026,11 +2264,15 @@ sub categoryedit {
     if($@) {
 	my($error) = $@;
 	print STDERR $error;
-	$self->serror("recursive cgi call failed, check logs");
+	$self->cerror("recursive cgi call failed, check logs");
     }
     return $self->edit($cgi);
 }
 
+#
+# HTML the category record has been edited, update catalog structure
+# accordingly.
+#
 sub categoryedit_done {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -3038,50 +2280,16 @@ sub categoryedit_done {
     my($name) = $cgi->param('name');
     $self->pathcheck($name);
     my($child) = $cgi->param('child');
-    my($child_length) = length($child);
-    #
-    # Replace the name of the category in path table
-    #
-    my($category) = $self->exec_select_one("select name from catalog_category_$name where rowid = $child");
-    my($category_name) = $self->path2url($category->{'name'});
-    my($rows) = $self->exec_select("select pathname,path,id from catalog_path_$name where path like '%,$child,%'");
-    my($row);
-    foreach $row (@$rows) {
-	#
-	# Find position of component to replace by searching the $child in path. Position
-	# is stored in $count.
-	#
-	my($i) = 0;
-	my($count) = 1;
-	do { $count++; $i++; } while(($i = index($row->{'path'}, ',', $i)) &&
-				     substr($row->{'path'}, $i + 1, $child_length) ne $child);
-	$i++;
-#	warn("child = $child, found = " . substr($row->{'path'}, $i, $child_length) . "\n");
-	#
-	# Find exact position and length of component to replace by counting the / in pathname
-	# (skip $count of them).
-	#
-	$i = 0;
-	while($count) { $i = index($row->{'pathname'}, '/', $i); $i++; $count--; }
-	my($name_length) = index($row->{'pathname'}, '/', $i) - $i;
-#	warn("child = $child, found = " . substr($row->{'pathname'}, $i, $name_length) . "\n");
-	#
-	# Substitute old category name with new one
-	#
-	substr($row->{'pathname'}, $i, $name_length, $category_name);
-#	warn("changed to $row->{'pathname'}");
-	#
-	# Change in table and update the md5 key
-	#
-	$self->update("catalog_path_$name", "id = $row->{'id'}",
-		      'pathname' => $row->{'pathname'},
-		      'md5' => MD5->hexhash($row->{'pathname'}));
-    }
+
+    $self->categoryedit_api($name, $child);
 
     $cgi->param('context' => 'cedit');
     $self->cedit($cgi);
 }
 
+#
+# HTML edit a catalog entry
+#
 sub centryedit {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -3107,11 +2315,15 @@ sub centryedit {
     if($@) {
 	my($error) = $@;
 	print STDERR $error;
-	$self->serror("recursive cgi call failed, check logs");
+	$self->cerror("recursive cgi call failed, check logs");
     }
     return $self->edit($cgi);
 }
 
+#
+# HTML search the record table for a record to insert in current
+# category.
+#
 sub centryselect {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -3136,11 +2348,14 @@ sub centryselect {
     if($@) {
 	my($error) = $@;
 	print STDERR $error;
-	$self->serror("recursive cgi call failed, check logs");
+	$self->cerror("recursive cgi call failed, check logs");
     }
     return $self->search_form($cgi);
 }
 
+#
+# HTML remove catalog entry and all links to categories step 1
+#
 sub centryremove_all {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -3157,6 +2372,9 @@ sub centryremove_all {
     return $self->stemplate_build($template);
 }
 
+#
+# HTML remove catalog entry and all links to categories step 2
+#
 sub centryremove_all_confirm {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -3166,29 +2384,16 @@ sub centryremove_all_confirm {
     # Remove all the links between the entry and the categories
     #
     my($primary_value) = $cgi->param('row');
-    my($rows) = $self->exec_select("select category from catalog_entry2category_$name where row = $primary_value");
-    if(defined($rows)) {
-	my($row);
-	foreach $row (@$rows) {
-	    my($id) = $row->{'category'};
-	    
-	    $self->mdelete("catalog_entry2category_$name",
-			   "row = $primary_value and category = $id");
-	    $self->ccount($id, '-1');
-	}
-    }
-    #
-    # Remove the entry itself
-    #
-    my($ccatalog) = $self->cinfo();
-    my($table) = $ccatalog->{$name}->{'tablename'};
-    my($primary_key) = $self->info_table($table)->{'_primary_'};
-    $self->mdelete($table, "$primary_key = $primary_value");
+
+    $self->centryremove_all_api($name, $primary_value);
 
     $cgi->param('context', 'cedit');
     return $self->cedit($cgi);
 }
 
+#
+# HTML remove link between current category and record
+#
 sub centryremove {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -3199,14 +2404,18 @@ sub centryremove {
     #
     my($id) = $cgi->param('id');
     my($row) = $cgi->param('row');
-    $self->mdelete("catalog_entry2category_$name",
-		   "row = $row and category = $id");
-    $self->ccount($id, '-1');
+
+    $self->centryremove_api($name, $id, $row);
 
     $cgi->param('context', 'cedit');
     return $self->cedit($cgi);
 }
 
+#
+# HTML Create a record and link to current category
+# param rowid not set : insert form for the record
+# param rowid set : link new record to current category
+#
 sub centryinsert {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -3233,7 +2442,7 @@ sub centryinsert {
 	if($@) {
 	    my($error) = $@;
 	    print STDERR $error;
-	    $self->serror("recursive cgi call failed, check logs");
+	    $self->cerror("recursive cgi call failed, check logs");
 	}
 	return $self->insert_form($cgi);
     } else {
@@ -3242,17 +2451,20 @@ sub centryinsert {
 	# Link the created entry to its category
 	#
 	my($id) = $cgi->param('id');
-	$self->insert("catalog_entry2category_$name",
-		      'info' => 'hidden',
-		      'row' => $cgi->param('rowid'),
-		      'category' => $id);
-	$self->ccount($id, '+1');
+	my($rowid) = $cgi->param('rowid');
+
+	$self->centryinsert_api($name, $id, $rowid);
 
 	$cgi->param('context', 'cedit');
 	return $self->cedit($cgi);
     }
 }
 
+#
+# HTML Create a new catalog (date/alpha/theme)
+# param rowid not set : fill the category description record
+# param rowid set : call the appropriate catalog creation function
+#
 sub cbuild {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -3285,7 +2497,7 @@ sub cbuild {
 	    if($@) {
 		my($error) = $@;
 		print STDERR $error;
-		$self->serror("recursive cgi call failed, check logs");
+		$self->cerror("recursive cgi call failed, check logs");
 	    }
 	    return $self->insert_form($cgi);
 	}
@@ -3298,7 +2510,7 @@ sub cbuild {
 	if(!defined($error)) {
 	    $self->cbuild_real($rowid, $name, $table, $navigation, $field);
 	} else {
-	    $self->exec("delete from catalog where rowid = $rowid");
+	    $self->db()->exec("delete from catalog where rowid = $rowid");
 	}
     }
     return $self->ccontrol_panel(Catalog::tools::cgi->new({
@@ -3309,154 +2521,9 @@ sub cbuild {
     }));
 }
 
-sub cbuild_api {
-    my($self, %record) = @_;
-
-    my($error) = $self->cbuild_check($record{'name'},
-				     $record{'tablename'},
-				     $record{'navigation'},
-				     'step2',
-				     $record{'fieldname'});
-    
-    error($error) if(defined($error));
-    
-    my($rowid) = $self->insert("catalog",
-			       %record);
-
-    $self->cbuild_real($rowid,
-		       $record{'name'},
-		       $record{'tablename'},
-		       $record{'navigation'},
-		       $record{'fieldname'});
-
-    $self->cinfo_clear();
-}
-
-sub cbuild_real {
-    my($self, $rowid, $name, $table, $navigation, $field) = @_;
-    
-    eval {
-	if(!$navigation || $navigation =~ /theme/) {
-	    $self->cbuild_theme($name, $rowid);
-	} elsif($navigation eq 'date') {
-	    $self->cbuild_date($name, $rowid, $field);
-	} else {
-	    $self->cbuild_alpha($name, $rowid, $field);
-	}
-    };
-    #
-    # Construction of the catalog failed, rewind
-    #
-    if($@) {
-	my($error) = $@;
-	$self->exec("delete from catalog where rowid = $rowid");
-	error($error);
-    }
-
-    $self->cinfo_clear();
-}
-
-sub cbuild_alpha {
-    my($self, $name, $rowid, $field) = @_;
-
-    #
-    # Create catalog tables
-    #
-    my($table);
-    foreach $table (@tablelist_alpha) {
-	my($schema) = $schema{$table};
-	$schema =~ s/NAME/$name/g;
-	$self->exec($schema);
-    }
-
-    my($letter);
-    foreach $letter ('0'..'9', 'a'..'z') {
-	$self->insert("catalog_alpha_$name",
-		      'letter' => $letter);
-    }
-}
-
-sub cbuild_date {
-    my($self, $name, $rowid, $field) = @_;
-
-    #
-    # Create catalog tables
-    #
-    my($table);
-    foreach $table (@tablelist_date) {
-	my($schema) = $schema{$table};
-	$schema =~ s/NAME/$name/g;
-	$self->exec($schema);
-    }
-}
-
-sub cbuild_check {
-    my($self, $name, $table, $navigation, $step, $field) = @_;
-
-    return undef if($::opt_fake);
-
-    if($step eq 'step2') {
-	my($name_quoted) = $self->quote($name);
-	return "you must specify the name of the catalog (name)" if(!$name);
-    }
-    return "you must specify a table name (tablename)" if(!$table);
-    return "the table $table does not exist (tablename)" if(!grep($table eq $_, @{$self->tables()}));
-    
-    if($navigation eq 'theme') {
-	my($info) = $self->info_table($table);
-	if(!exists($info->{'_primary_'}) ||
-	   $info->{'_primary_'} ne 'rowid' ||
-	   $info->{$info->{'_primary_'}}->{'type'} ne 'int') {
-	    return "the table $table does not have a unique primary numerical key named rowid";
-	}
-
-    } elsif($step eq 'step2' &&
-	    ($navigation eq 'date' ||
-	     $navigation eq 'alpha')) {
-	my($info) = $self->info_table($table);
-	return "a field name must be specified for date catalogs (fieldname)" if(!$field);
-	return "$field is not a field of $table (fieldname)" if(!exists($info->{$field}));
-	if($navigation eq 'date') {
-	    return "$field of table $table is not a field of type date or time" if($info->{$field}->{'type'} ne 'date' && $info->{$field}->{'type'} ne 'time');
-	} elsif($navigation eq 'alpha') {
-	    return "$field of table $table is not a field of type char" if($info->{$field}->{'type'} ne 'char');
-	}
-    }
-    return undef;
-}
-
-sub cbuild_theme {
-    my($self, $name, $rowid) = @_;
-
-    #
-    # Create catalog tables
-    #
-    my($table);
-    foreach $table (@tablelist_theme) {
-	my($schema) = $schema{$table};
-	$schema =~ s/NAME/$name/g;
-	$self->exec($schema);
-    }
-    #
-    # Create root of catalog
-    #
-    my($root_rowid) = $self->insert("catalog_category_$name",
-				    'info' => 'root',
-				    'name' => '');
-
-    $self->insert("catalog_path_$name",
-		  'pathname' => '/',
-		  'md5' => MD5->hexhash('/'),
-		  'path' => ' ',
-		  'id' => $root_rowid);
-    #
-    # Register root in catalog table
-    #
-    $self->update("catalog", "rowid = '$rowid'",
-		  'root' => $root_rowid);
-    
-}
-
+#
+# HTML edit catalog description record
+#
 sub ccatalog_edit {
     my($self, $cgi) = @_;
     $self->{'cgi'} = $cgi;
@@ -3483,11 +2550,14 @@ sub ccatalog_edit {
     if($@) {
 	my($error) = $@;
 	print STDERR $error;
-	$self->serror("recursive cgi call failed, check logs");
+	$self->cerror("recursive cgi call failed, check logs");
     }
     return $self->edit($cgi);
 }
 
+#
+# HTML update catalog structure after modification of catalog record
+#
 sub ccatalog_edit_done {
     my($self, $cgi) = @_;
 
@@ -3499,7 +2569,46 @@ sub ccatalog_edit_done {
 }
 
 #
-# When generating sqledit calls, strip catalog name and path
+# HTML Return a Catalog::path object built with the cgi params
+#
+sub cgi2path {
+    my($self) = @_;
+    my($cgi) = $self->{'cgi'};
+
+    my($path) = $cgi->param('path');
+    my($id) = $cgi->param('id');
+    my($pathname) = $cgi->param('pathname');
+    my($url);
+    my($fashion);
+    if(defined($pathname)) {
+	$url = $cgi->script_name();
+	$fashion = 'intuitive';
+    } else {
+	$url = $self->ccall(path => undef, id => undef);
+	$fashion = 'cgi';
+    }
+    my($name) = $cgi->param('name');
+    my($catalog) = $self->cinfo()->{$name};
+    my($root) = $catalog->{'root'};
+
+    return Catalog::path->new(
+			      'db' => $self->db(),
+			      'root' => $root,
+			      'name' => $name,
+			      'url' => $url,
+			      'id' => $id,
+			      'path' => $path,
+			      'pathname' => $pathname,
+			      'fashion' => $fashion,
+			      'path_root_label' => $self->{'path_root_label'},
+			      'path_separator' => $self->{'path_separator'},
+			      'path_constant' => $self->{'path_constant'},
+			      'path_last_link' => $self->{'path_last_link'},
+			      );
+}
+
+#
+# When generating sqledit recursive calls, strip catalog name and path
 #
 sub call {
     my($self, $table, $info, $row, %pairs) = @_;
@@ -3512,20 +2621,23 @@ sub call {
     return $self->Catalog::tools::sqledit::call($table, $info, $row, %pairs);
 }
 
+#
+# Generate cgi call that preserves persistent parameters
+#
 sub ccall {
     my($self, %pairs) = @_;
 
     my($params) = $self->params(%pairs);
-    my($script) = $self->{'cgi'}->url(-absolute => 1);
+    my($script) = $self->{'cgi'}->script_name();
     return "$script?$params";
 }
 
+#
+# Change error handling method for Catalog::implementation base class
+#
 sub cerror {
-    my($self, $cgi, $message) = @_;
-
-    my($template) = $self->template("error");
-    $template->{'assoc'}->{'_MESSAGE_'} = $message;
-    return $self->stemplate_build($template);
+    my($self) = shift;
+    $self->serror(@_);
 }
 
 1;

@@ -17,16 +17,15 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 package Ecila::tools::sqledit;
-use vars qw(@ISA $head %default_templates);
+use vars qw($head %default_templates);
 use strict;
 
 use Carp;
 use CGI;
 use Ecila::tools::mysql;
 use Ecila::tools::cgi;
+use Ecila::db;
 use Ecila::tools::tools;
-
-@ISA = qw(Ecila::tools::mysql);
 
 $head = "
 <body bgcolor=#ffffff>
@@ -188,10 +187,17 @@ _PAGES_
 
 #sub DESTROY {}
 
+sub new {
+    my($type) = @_;
+
+    my($self) = {};
+    bless($self, $type);
+    $self->initialize();
+    return $self;
+}
+
 sub initialize {
     my($self) = @_;
-
-    $self->Ecila::tools::mysql::initialize();
 
     my($config) = config_load("sqledit.conf");
     if(exists($config->{'functions'})) {
@@ -210,8 +216,13 @@ sub initialize {
 	}
     }
     %$self = (%$self, %$config) if(defined($config));
+
     $config = config_load("install.conf");
     %$self = (%$self, %$config) if(defined($config));
+    
+    $self->{'db'} = Ecila::db->new() if(!defined($self->{'db'}));
+    my($db) = $self->{'db'};
+    $db->resources_load('sqledit_schema', 'Ecila::tools::schema');
 
     $self->{'params'} = [ 'table', 'links_set', 'stack', 'context', 'conf', 'order', 'style', 'limit' ];
     $self->{'templates'} = { %default_templates };
@@ -260,9 +271,18 @@ sub selector {
     $cgi = Ecila::tools::cgi->new() if(!defined($cgi));
 
     my($verbose) = $cgi->param('verbose');
-    $::opt_verbose = $verbose if(defined($verbose));
+    if(defined($verbose)) {
+	# these are 'skicky', only changing when param verbose is given
+	# verbose = 1 - minimal
+	# verbose = 2 - enables opt_error_stack
+	# verbose = 3 - spare
+	# verbose>= 4 - sets DBI->trace to verbose-3
+	$::opt_verbose = $verbose if defined $verbose;
+	$::opt_error_stack = ($::opt_verbose > 1);
+	DBI->trace($verbose-3) if defined $verbose;
+    }
 
-    my($context);
+    my($context) = '';
     if(defined($cgi->param('context'))) {
 	$context = $cgi->param('context');
     } elsif($cgi->path_info()) {
@@ -279,7 +299,7 @@ sub selector {
     $cgi->nph(1) if(exists($self->{'nph'}) && $self->{'nph'} eq 'yes');
     print $cgi->header(-type => $content);
     if($context !~ /^[\w_]+$/io) {
-	print "$context is not a valid context";
+	print "'$context' is not a valid context name";
 	return "";
     }
 
@@ -294,6 +314,7 @@ sub selector {
     my($html);
     my($error);
     eval {
+	local($SIG{__DIE__});
 	$html = $self->${context}($cgi);
     };
     if($@) {
@@ -325,7 +346,7 @@ sub selector {
 }
 
 #
-# Undocumented feature specific to CFCE
+# Undocumented feature specific to CFCE may be usefull for others but not sure
 #
 sub special_auth {
     my($self, $cgi) = @_;
@@ -337,10 +358,10 @@ sub special_auth {
 	    print istring("special_auth: missing %s", $spec->{'param'});
 	    return 0;
 	}
-	my($today) = $self->date(time());
+	my($today) = $self->db()->date(time());
 	my($row);
 	eval {
-	    $row = $self->exec_select_one("select * from $spec->{'table'} where $spec->{'field_date'} = '$today' and $spec->{'field_password'} = '$password'");
+	    $row = $self->db()->exec_select_one("select * from $spec->{'table'} where $spec->{'field_date'} = '$today' and $spec->{'field_password'} = '$password'");
 	};
 	if($@) {
 	    my($error) = $@;
@@ -425,22 +446,8 @@ sub search_entry_tags {
 sub requests_check {
     my($self) = @_;
 
-    if(!$self->table_exists('sqledit_requests')) {
-	my($schema) = "
-create table sqledit_requests (
-  rowid int not null auto_increment,
-
-  rwhere varchar(255),
-  rtable char(64),
-  rlinks varchar(255),
-  rorder char(64),
-  rparams varchar(255),
-  label char(32),
-
-  unique sqledit_requests1 (rowid)
-)
-";
-	$self->exec($schema);
+    if(!$self->db()->table_exists('sqledit_requests')) {
+	$self->db()->exec($self->db()->schema('sqledit_schema', 'sqledit_request'));
     }
 }
 
@@ -583,7 +590,7 @@ sub sinsert_1 {
     my($self, $table) = @_;
     my($cgi) = $self->{'cgi'};
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
 
     my($comment);
     my(%insert);
@@ -616,7 +623,7 @@ sub sinsert_1 {
 	}
     }
 
-    my($primary) = $self->insert($table, %insert);
+    my($primary) = $self->db()->insert($table, %insert);
     $insert{$info->{'_primary_'}} = $primary;
     
     return (\%insert, $primary);
@@ -635,7 +642,7 @@ sub set_handle_param {
     my($new_value);
     my($old_value);
     if(defined($row)) {
-	$self->dict_link($desc, $table, $field);
+	$self->db()->dict_link($desc, $table, $field);
 	my($values) = $desc->{'values'};
 	my(%value2key) = map { $values->{$_} => $_ } keys(%$values);
 
@@ -674,7 +681,7 @@ sub row2edit {
 sub row2edit_1 {
     my($self, $table, $row, $use_default) = @_;
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
 
     my($html);
     my($fields) = $info->{'_fields_'};
@@ -713,10 +720,10 @@ sub row2edit_1 {
 	    }
 	    $html .= "<input type=file name=$field>";
 	} elsif($type eq 'set' ) {
-	    $self->dict_link($desc, $table, $field);
+	    $self->db()->dict_link($desc, $table, $field);
 	    $html .= $self->choice($table, $desc, 'table', $field, $value, $use_default, 'checkbox');
 	} elsif($type eq 'enum') {
-	    $self->dict_link($desc, $table, $field);
+	    $self->db()->dict_link($desc, $table, $field);
 	    $html .= $self->choice($table, $desc, 'select', $field, $value, $use_default);
 	}
     }
@@ -731,7 +738,7 @@ sub imagedisplay {
 
     my($field) = $cgi->param('field');
     my($table) = $cgi->param('table');
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
     my($primary) = $cgi->param($info->{'_primary_'});
     my($image) = $self->exec_select_one("select $field from $table where $info->{'_primary_'} = $primary")->{$field};
 
@@ -755,7 +762,7 @@ sub row2title {
 sub row2view {
     my($self, $row, $table, $style) = @_;
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
     
     my($html);
     my($fields) = $info->{'_fields_'};
@@ -936,7 +943,7 @@ sub dict_alt {
     dbg("dict_alt: check alt_value exists", "sqledit");
     return $param_value if(!defined($alt_value));
 
-    my($values) = $self->dict_link($desc, $table, $field);
+    my($values) = $self->db()->dict_link($desc, $table, $field);
 
     #
     # The value already exists, do nothing
@@ -947,7 +954,7 @@ sub dict_alt {
 
     if(!defined($result)) {
 	dbg("dict_alt: add", "sqledit");
-	$result = $self->dict_add($desc->{'dict'}->{'table'}, $alt_value);
+	$result = $self->db()->dict_add($desc->{'dict'}->{'table'}, $alt_value);
     }
     
     if(exists($desc->{'dict'}->{'map'})) {
@@ -976,7 +983,7 @@ sub row2assoc {
 sub row2assoc_1 {
     my($self, $table, $row, $assoc, $use_default) = @_;
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
 
     my($func) = sub {
 	my($field, $tag, $desc, $form) = @_;
@@ -987,16 +994,16 @@ sub row2assoc_1 {
 #	warn("$field $tag $form $value " . ostring($desc));
 
 	if($type eq 'set' && $form eq 'CHECKBOX') {
-	    $self->dict_link($desc, $table, $field);
+	    $self->db()->dict_link($desc, $table, $field);
 	    $assoc->{$tag} = $self->choice($table, $desc, 'table', $field, $value, $use_default, 'checkbox');
 	} elsif($type eq 'set' && $form eq 'MENU') {
-	    $self->dict_link($desc, $table, $field);
+	    $self->db()->dict_link($desc, $table, $field);
 	    $assoc->{$tag} = $self->choice($table, $desc, 'select', $field, $value, $use_default, 'multiple');
 	} elsif($type eq 'enum' && $form eq 'RADIO') {
-	    $self->dict_link($desc, $table, $field);
+	    $self->db()->dict_link($desc, $table, $field);
 	    $assoc->{$tag} = $self->choice($table, $desc, 'table', $field, $value, $use_default, 'radio');
 	} elsif($type eq 'enum' && $form eq 'MENU') {
-	    $self->dict_link($desc, $table, $field);
+	    $self->db()->dict_link($desc, $table, $field);
 	    $assoc->{$tag} = $self->choice($table, $desc, 'select', $field, $value, $use_default);
 	} elsif($type eq 'blob' && defined($value)) {
 	    my($imageutil) = $self->{'imageutil'};
@@ -1024,7 +1031,7 @@ sub row2assoc_1 {
 sub walk_table_tags {
     my($self, $table, $assoc, $func) = @_;
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
 
     my(%sub);
     my($fields) = $info->{'_fields_'};
@@ -1072,9 +1079,9 @@ sub remove_confirm {
     $self->{'cgi'} = $cgi;
     my($table) = $cgi->param('table');
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
 
-    $self->mdelete($table, "$info->{'_primary_'} = " . $cgi->param('primary'));
+    $self->db()->mdelete($table, "$info->{'_primary_'} = " . $cgi->param('primary'));
 
     my($template) = $self->template("sqledit_remove_confirm");
 
@@ -1088,9 +1095,9 @@ sub edit {
     my($table) = $cgi->param('table');
     $self->{'cgi'} = $cgi;
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
     
-    my($row) = $self->sexec_select_one($table, "select * from $table where $info->{'_primary_'} = " . $cgi->param('primary'));
+    my($row) = $self->db()->sexec_select_one($table, "select * from $table where $info->{'_primary_'} = " . $cgi->param('primary'));
 
     my($template) = $self->template("sqledit_edit");
     my($assoc) = $template->{'assoc'};
@@ -1122,7 +1129,7 @@ sub args2row {
 
     my(%row);
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
     my($fields) = $info->{'_fields_'};
 
     my($field);
@@ -1168,9 +1175,9 @@ sub supdate_1 {
     my($self, $table, $primary) = @_;
     my($cgi) = $self->{'cgi'};
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
 
-    my($row) = $self->sexec_select_one($table, "select * from $table where $info->{'_primary_'} = $primary");
+    my($row) = $self->db()->sexec_select_one($table, "select * from $table where $info->{'_primary_'} = $primary");
 
     my(@updated_fields);
     my(%update);
@@ -1206,7 +1213,7 @@ sub supdate_1 {
 
     if(@updated_fields) {
 	$self->update_hook(\%update, $row, @updated_fields);
-	$self->update($table, "$info->{'_primary_'} = $primary",
+	$self->db()->update($table, "$info->{'_primary_'} = $primary",
 		      %update);
     }
     return \@updated_fields;
@@ -1229,7 +1236,7 @@ sub search_sql {
 	    my($type) = $info->{$field}->{'type'};
 	    $where .= "and $field ";
 	    if($type eq 'char') {
-		my($quoted_value) = $self->quote($value);
+		my($quoted_value) = $self->db()->quote($value);
 		$where .= "like '$quoted_value' ";
 	    } elsif($type eq 'int' || $type eq 'time') {
 		my($operator) = "=";
@@ -1277,7 +1284,7 @@ sub search {
     $self->{'cgi'} = $cgi;
     my($table) = $cgi->param('table');
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
 
     my($params) = $self->params();
 
@@ -1475,8 +1482,8 @@ sub hook_search {
 sub hook_search_retrieve {
     my($self, $table, $primary_value) = @_;
 
-    my($info) = $self->info_table($table);
-    my($row) = $self->sexec_select_one($table, "select * from $table where $info->{'_primary_'} = $primary_value");
+    my($info) = $self->db()->info_table($table);
+    my($row) = $self->db()->sexec_select_one($table, "select * from $table where $info->{'_primary_'} = $primary_value");
     return { $table => $row };
 }
 
@@ -1607,7 +1614,7 @@ sub searcher {
 sub searcher_sql {
     my($self, $template, $table, $context) = @_;
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
 
     return "select $info->{'_primary_'} from $table $context->{'real where'} $context->{'real order'}";
 }
@@ -1619,7 +1626,7 @@ sub searcher_pager {
     my($select) = $context->{'select'};
     if(!defined($select)) {
 	$select = sub {
-	    $self->select(@_);
+	    $self->db()->select(@_);
 	};
     }
 
@@ -1644,7 +1651,7 @@ sub searcher_nopager {
     my($select) = $context->{'select'};
     if(!defined($select)) {
 	$select = sub {
-	    $self->select(@_);
+	    $self->db()->select(@_);
 	};
     }
     
@@ -1761,7 +1768,7 @@ sub searcher_expand {
     my($self, $template, $tables, $rows, $context) = @_;
 
     my($table) = $tables->[0];
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
     my($primary_key) = $info->{'_primary_'};
     my($primary_values) = join(',', map { $_->{$primary_key} } @$rows);
     my($fields) = $self->searcher_select_fields($template, $table, $template->{'assoc'}, $context->{'fields'});
@@ -1780,7 +1787,7 @@ sub searcher_expand {
     error("no field to retrieve according to template entry") if(!defined($fields));
     my($sql) = "select $fields from $table where $primary_key in ($primary_values) $context->{'real order'}";
     dbg("searcher_layout: $sql", "sqledit");
-    ($rows) = $self->sexec_select($table, $sql);
+    ($rows) = $self->db()->sexec_select($table, $sql);
     my($results);
     my($row);
     foreach $row (@$rows) {
@@ -1836,7 +1843,7 @@ sub searcher_layout_result {
 sub searcher_links {
     my($self, $table, $row, $context) = @_;
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
     my($html);
     my($tag);
     foreach $tag ('edit', 'remove') {
@@ -1861,7 +1868,7 @@ sub searcher_select_fields {
     # Collect fields
     #
     my(@fields);
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
     my(@set_dict) = exists($info->{'_set_dict_'}) ? @{$info->{'_set_dict_'}} : ();
     if(exists($assoc->{'_DEFAULTROW_'})) {
 	dbg("table $table use _DEFAULTROW_", "sqledit");
@@ -1914,12 +1921,12 @@ sub search_1 {
     my($cgi) = $self->{'cgi'};
     my($table) = $cgi->param('table');
 
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
 
     #
     # Extract data
     #
-    my($rows, $rows_total) = $self->sselect($table, $sql, $index, $length);
+    my($rows, $rows_total) = $self->db()->sselect($table, $sql, $index, $length);
 
     my($links_set) = $self->links_set();
     my($links_set_root) = defined($links_set) ? $links_set->{$table} : undef;
@@ -1982,7 +1989,7 @@ sub list {
 
     my($html);
     my($file);
-    my($databases) = $self->databases();
+    my($databases) = $self->db()->databases();
     my($script) = $cgi->url(-absolute => 1);
     foreach $file (@$databases) {
 	my($base, $table) = $file =~ m;(.*)/(.*).frm;;
@@ -2004,7 +2011,7 @@ sub display_relations {
     my($self, $template, $table, $result, $level, $links_set, $index) = @_;
 
     my($block);
-    my($info) = $self->info_table($table);
+    my($info) = $self->db()->info_table($table);
 
     dbg("sqledit_search: display_relations for $table, level $level, relations for table " . join(",", keys(%$links_set)) . "\n", "sqledit");
 
@@ -2076,11 +2083,11 @@ sub extract_values {
 	my($linked_field) = $desc->{'field'};
 	my($field_to_link) = $desc->{'key'};
 	my($value_link) = $row->{$field_to_link};
-	my($info_link) = $self->info_table($sub_table);
+	my($info_link) = $self->db()->info_table($sub_table);
 	my($type_link) = $info_link->{$linked_field}->{'type'};
 	my($where_link) = "$linked_field ";
 	if($type_link eq 'char') {
-	    my($quoted_value) = $self->quote($value_link);
+	    my($quoted_value) = $self->db()->quote($value_link);
 	    $where_link .= "like '$quoted_value' ";
 	} elsif($type_link eq 'int' || $type_link eq 'time') {
 	    my($operator) = "=";
@@ -2100,7 +2107,7 @@ sub extract_values {
 	    $where_link .= "like '%$value_link%' ";
 	}
 	my($sql_link) = "select * from $sub_table where $where_link";
-	my($sub_rows, $sub_rows_total) = $self->sexec_select($sub_table, $sql_link);
+	my($sub_rows, $sub_rows_total) = $self->db()->sexec_select($sub_table, $sql_link);
 	@{$result->{$sub_table}} = map {
 	    {
 		'rows' => $_,
@@ -2364,7 +2371,13 @@ sub confedit {
 sub close {
     my($self) = @_;
 
-    $self->logoff();
+    $self->db()->logoff();
+}
+
+sub db {
+    my($self) = @_;
+
+    return $self->{'db'};
 }
 
 sub serror {
@@ -2372,6 +2385,7 @@ sub serror {
 
     my($template) = $self->template("error");
     my($message) = istring(@message);
+    $message = Carp::longmess($message) if $::opt_error_stack;
     template_set($template->{'assoc'}, '_MESSAGE_', $message);
     print $self->stemplate_build($template);
     error("HTMLIZED: $message");

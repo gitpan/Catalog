@@ -1,5 +1,5 @@
 #
-# $Header: /spare2/ecila-cvsroot/Catalog/t/02rdf.t,v 1.4 1999/04/14 11:29:47 ecila40 Exp $
+# $Header: /spare2/ecila-cvsroot/Catalog/t/02rdf.t,v 1.5 1999/05/15 14:20:50 ecila40 Exp $
 #
 use strict;
 
@@ -28,8 +28,8 @@ print "
 ";
 my($catalog) = Catalog->new();
 $catalog->cimport_api($catname, "t/rdf/guide.rdf");
-my($count) = $catalog->exec_select_one("select count(*) as count from urldemo")->{'count'};
-ok($count == 16, 1, "import t/rdf/guide.rdf $count records in urldemo instead of 17");
+my($count) = $catalog->db()->exec_select_one("select count(*) as count from urldemo")->{'count'};
+ok($count == 18, 1, "import t/rdf/guide.rdf $count records in urldemo instead of 18");
 $catalog->close();
 }
 show_size();

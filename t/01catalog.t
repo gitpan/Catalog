@@ -8,7 +8,7 @@
 # Uncomment the ok() because it appear like slight leak, which is natural.
 # Run the test. The numbers, except for the first two, must not change at all.
 #
-# $Header: /spare2/ecila-cvsroot/Catalog/t/01catalog.t,v 1.2 1999/04/12 15:15:31 ecila40 Exp $
+# $Header: /spare2/ecila-cvsroot/Catalog/t/01catalog.t,v 1.5 1999/05/15 14:20:50 ecila40 Exp $
 #
 use strict;
 
@@ -25,6 +25,9 @@ use Catalog::tools::tools;
 use Catalog;
 
 require "t/lib.pl";
+
+#$::opt_verbose = 'mysql|normal';
+$::opt_error_stack = 1;
 
 rundb();
 
@@ -514,7 +517,7 @@ $cgi = Catalog::tools::cgi->new();
 param_snif($cgi, $html);
 $cgi->param('dump' => "t/tmp/html/catalog$Test::ntest.html");
 $t = $catalog->selector($cgi);
-my($row) = $catalog->exec_select_one("select * from urldemo where comment like '%entry3%'");
+my($row) = $catalog->db()->exec_select_one("select * from urldemo where comment like '%entry3%'");
 ok($t !~ /entry3/i && !defined($row), 1, "removing entry3");
 
 $catalog->close();
@@ -557,15 +560,15 @@ print "
 ";
 my($cgi, $catalog, $t, $html);
 $catalog = Catalog->new();
-$catalog->exec("update catalog_category_$catname set count = 0 where rowid = 4");
+$catalog->db()->exec("update catalog_category_$catname set count = 0 where rowid = 4");
 $cgi = Catalog::tools::cgi->new();
 $cgi->param('context' => 'category_count');
 $cgi->param('name' => "$catname");
 $cgi->param('dump' => "t/tmp/html/catalog$Test::ntest.html");
 $t = $catalog->selector($cgi);
 
-my($row) = $catalog->exec_select_one("select * from catalog_category_$catname where rowid = 4");
-ok($row->{'count'} == 5, 1, "counting category cat3");
+my($row) = $catalog->db()->exec_select_one("select * from catalog_category_$catname where rowid = 4");
+ok($row->{'count'}, 5, "counting category cat3");
 
 #print STDERR size() . "\n";
 #}
@@ -799,7 +802,7 @@ $cgi->param('context' => 'cdestroy_confirm');
 $cgi->param('name' => "$catname");
 $cgi->param('dump' => "t/tmp/html/catalog$Test::ntest.html");
 $t = $catalog->selector($cgi);
-my(@tables) = grep(/$catname/, $catalog->tables());
+my(@tables) = grep(/$catname/, $catalog->db()->tables());
 ok($t !~ /$catname/i, 1, "Destroy catalog");
 
 $catalog->close();
@@ -912,7 +915,7 @@ print "
 ";
 my($cgi, $catalog, $t, $html);
 $catalog = Catalog->new();
-$catalog->exec("update catalog_alpha_urlalpha set count = 0");
+$catalog->db()->exec("update catalog_alpha_urlalpha set count = 0");
 $cgi = Catalog::tools::cgi->new();
 $cgi->param('context' => 'calpha_count');
 $cgi->param('name' => "$catname");
@@ -977,7 +980,7 @@ $cgi->param('context' => 'cdestroy_confirm');
 $cgi->param('name' => "$catname");
 $cgi->param('dump' => "t/tmp/html/catalog$Test::ntest.html");
 $t = $catalog->selector($cgi);
-my(@tables) = grep(/$catname/, $catalog->tables());
+my(@tables) = grep(/$catname/, $catalog->db()->tables());
 ok($t !~ /$catname/i, 1, "Destroy catalog");
 
 $catalog->close();
@@ -1047,7 +1050,7 @@ show_size();
 		  '1998-08-15 10:10:10',
 		  '1998-08-15 10:10:10',
 		  '1998-08-15 10:10:10') {
-	$catalog->exec("update urldemo set created = '$date' where rowid = $i");
+	$catalog->db()->exec("update urldemo set created = '$date' where rowid = $i");
 	$i++;
     }
     $catalog->close();

@@ -1,0 +1,159 @@
+
+               Contributions guidelines and tools
+
+INTRODUCTION
+
+ Contributions to Catalog are encouraged by giving a full access to the
+CVS development tree. It is crucial that the contributors work on the
+latest version of Catalog. There are two main reasons for this
+
+       1) The structure of the software evolve constantly and contributions
+          are more meaningfull if they apply on the latest structure.
+       2) The integration of the contributions in the main development
+          trunc are much easier if they are based on the most recent
+	  sources.
+
+ Senga provides a working method that allows each contributor to work
+in his own branch of the sources. Whenever the contributor reaches a point
+where the contribution is considered stable, he asked senga to merge his
+changes to the main trunc. When the contribution has been integrated,
+a new branch is created from the main trunc so that the contributor can
+continue to work on the latest set of sources.
+
+ In order to become a contributor to Catalog we only ask you to provide
+a short description of what you want to do. It's probably not worth going
+into all this trouble if you only want to provide a minor contribution,
+that is less than five days of work.
+
+DEVELOPMENT METHODS
+
+ These are development methods we use at senga, it does not mean that
+you have to follow them :-)
+
+ To start working on a new we create a user, install apache with
+mod_perl, mysql, perl and Catalog in $HOME/local. The apache
+server is run on unprivileged port.
+
+ When implementing something we first test that the thing works
+by adding some tests in the t/*.t files and run make test until
+it passes. 
+
+ When it looks like working with the tests we make install and 
+play with it using the local apache server.
+
+ When satisfied by a set of modifications, we make clean realclean,
+cvs update to check that nothing weird happend, and commit.
+
+CONTRIBUTION LOOP
+
+ In the following scenario we assume that the contributor name is 'tim'
+and that the current version of Catalog is catalog-0-6. The 'contribute'
+script is delivered in Catalog (Catalog/bin/contribute.PL) and has been
+installed with Catalog. It is a simple helper to automate the CVS 
+commands needed to contribute. Before running a command 'contribute' 
+asks for a confirmation so that you can make sure it does nothing wrong.
+
+ First time:
+
+	Get a source tree to work with
+	$ cvs login
+	$ cvs checkout -r catalog-0-6-tim Catalog
+
+ Work loop:
+
+	Make some changes
+	When the contributor changes are in a stable state
+	$ make clean realclean
+
+ Checkpoint:
+
+	$ contribute -contributor tim -commit
+	cvs update
+	cvs commit
+	cd Catalog
+	cvs tag -F catalog-0-6-tim-2
+
+	Send a mail to senga@senga.org to ask for integration of 
+	catalog-0-6-tim-2 modifications.
+
+  Goto Work loop
+
+ The contributor will never have to wait for senga to complete the
+merge, which is much better (who knows, we could be ill during a full
+week ?).
+ When the contributor changes have been integrated by senga, he receives
+a mail about a new branch being available for him, including his 
+modifications and the latest modifications from the main trunc.
+The contributor must do one of the following:
+
+ 1) Senga has been fast in integrating the contributor
+    changes. Work done since the integration request can be put
+    in a patch file:
+
+	$ contribute -contributor tim -diff (generates a <version>.diff file)
+
+    The branch just created for the contributor can now be checked out
+
+	$ contribute -contributor tim -checkout (the old version is backuped)
+
+    And the patch can be applied on the extracted branch
+
+	$ cd Catalog ; patch -p0 < ../<version>.diff
+
+ 2) Senga has been slow or the contributor has been working hard in the
+    meantime. The contributor is asked to reach a stable state as 
+    quickly as possible on the same branch and go back to 'Checkpoint',
+    in the hope that at some point we will be able to go to scenario 1)
+
+GORY DETAILS
+
+ Here are the detailed list of command involved by the contribution process,
+on both sides:
+
+ version=0-6 ; contributor=tim
+ senga:    cvs rtag catalog-$version Catalog
+ senga:    cvs rtag -b -r catalog-$version catalog-$version-$contributor Catalog
+ senga:    cvs checkout -r catalog-$version-$contributor Catalog
+ senga:    cd Catalog
+ senga:    cvs tag catalog-$version-$contributor-1
+ senga:    mail that branch is ready for use
+ contributor:    cvs checkout -r catalog-$version-$contributor Catalog
+ contributor:    cd Catalog
+ contributor:    work and get something working
+ contributor:    make cvs_commit
+ contributor:    mail senga@senga.org to ask for integration. Include
+ contributor:       the tag name generated to mark the end of your
+ contributor:       changes.
+ contributor:    work
+ senga:    cvs update -ko -j catalog-$version-$contributor-1 -j catalog-$version-$contributor-2
+ senga:    resolve conflicts/test
+ senga:    cvs commit -m 'integrated work'
+
+ loop with version=0-7 
+
+CVS TREE MANAGER ACTIONS
+
+ Finaly, and this is only for the manager of the CVS repository, here are the set of
+operations for managing the contributions.
+
+1) Creating a new working branch
+
+ $ contribute -contributor tim -branch
+ mail tim : the branch is ready
+ 
+2) Merging contributions with main trunc
+
+ $ mkdir tmp 
+ $ cd tmp
+ $ contribute -contributor tim -merge 1
+
+ The -merge argument is 1 to merge changes from catalog-0-6-tim-1 to catalog-0-6-tim-2, it is 2
+ to merge changes from catalog-0-6-tim-2 to catalog-0-6-tim-3 etc.
+
+ $ cd Catalog
+ resolve conflicts
+ $ cvs commit -m 'tim contribution'
+
+ back to 1)
+
+$Header: /spare2/ecila-cvsroot/Catalog/CONTRIBUTIONS,v 1.2 1999/05/15 14:20:46 ecila40 Exp $

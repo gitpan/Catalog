@@ -4,6 +4,11 @@ EXE = Catalog dmoz
 
 all: $(EXE)
 
+#
+# Non GNU make need this before implicit rule
+#
+.SUFFIXES: .PL
+
 .PL:
 	@perl $<
 
@@ -21,5 +26,3 @@ realclean:
 	rm -f $(EXE)
 
 test:
-
-.SUFFIXES: .PL

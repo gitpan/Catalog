@@ -17,7 +17,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /spare2/ecila-cvsroot/perltools/main.pm,v 1.7 1999/01/29 11:11:14 ecila40 Exp $
+# $Header: /spare2/ecila-cvsroot/perltools/main.pm,v 1.8 1999/04/30 17:17:39 ecila40 Exp $
 #
 # 
 #
@@ -163,7 +163,7 @@ sub info {
     foreach $option (reverse(@$order)) {
 	next if($option eq "info");
 	my($flag) = $option;
-	$flag =~ s/^(\w+).*/\1/;
+	$flag =~ s/^(\w+).*/$1/;
 	my($value);
 	eval "\$value = \$::opt_$flag";
 	$info .= "[ '$option', '$self->{'short_usage'}->{$option}', '$self->{'explain'}->{$option}',  '$value' ],";

@@ -1,3 +1,124 @@
+1999-05-17  Loic Dachary  <loic@ceic.com>
+
+	* Catalog-0.9 release
+
+	* lib/Catalog.pm (initialize): initialization encoding bug fix thanks to wojtekz@cnt.pl
+
+	* doc/catalog.texinfo: add _PATH[0-9]+_ documentation
+
+	* lib/Catalog/mysql/schema.pm: changed login name length 16 -> 32 for dmoz in auth tables
+
+1999-05-15  Loic Dachary  <loic@ceic.com>
+
+	* Catalog-0.8 release
+
+	* doc/catalog.texinfo (dmoz.org): better documentation for loading dmoz
+
+	* lib/Catalog.pm, lib/Catalog/implementation.pm : extract non HTML code from Catalog.pm -> implementation.pm
+
+	* lib/Catalog/dmoz.pm : custom import form, simpler and more comments. Separate conversion and loading.
+
+1999-05-14  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog.pm: dump directory is created if it does not exist
+
+	* mysql.pm is now a member of sqledit.conf, not base class
+
+	* created db.pm, wrapping mysql.pm chosing the database type according to
+	  db.conf
+
+	* Catalog::mysql Catalog::tools::mysql Catalog::dmoz::mysql now contain tables declarations
+	  for mysql. First step to database independance. 
+
+	* INSTALL: added USE_CONFIG to reuse existing configuration
+
+	* conf/Makefile.PL: add home in mysql.conf (base install directory) bound to MYSQL_HOME,
+	  updated mysql.pm and t/lib.pl accordingly.
+
+
+1999-05-13  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog/external.pm (Catalog): user specified catalog name overrides catalog name in file
+
+	* INSTALL: added freebsd31 + simplify use of CPAN
+
+	* cgi-bin/Makefile (.PL): Non GNU make need .SUFFIXES before implicit rule
+
+	* Makefile.PL: now show version number of related packages
+
+	* INSTALL.apache (prefix): removed rewrite because bugous sometimes and not mandatory
+
+	* Makefile.PL (MY::postamble): removed cvs_diff_tag and cvs_commit, replaced by contribute
+
+	* lib/Bundle/Catalog.pm: added Catalog itself since it made his way into CPAN
+
+1999-05-13  Tim Bunce  <Tim.Bunce@ig.co.uk>
+
+	* Makefile.PL: version_check prints version number of modules.
+	Added ptags target to generate tags file for most source files.
+
+	* conf/Makefile: when installed .conf files already exists: give
+	message and display a diff.
+
+	* Catalog.pm: make error.html output more readable for large errors
+	(esp with $::opt_error_stack true). Use multi-arg form of system()
+	for security. Minor improvements to some error messages.
+
+	* lib/Catalog/external.pm: Fix typo on error message.
+    The "create table" statement now allows table names with digits.
+
+	* lib/Catalog/tools/mysql.pm: Comment out two s//\\0/g regex that
+	caused the catalog to fail (using 5.005_02). Added db_bin_dir config
+	value to specify path to mysqldump.
+
+	* lib/Catalog/tools/sqledit.pm: The verbose cgi param can now also
+	be used to enable DBI->trace levels.
+
+	* t/lib.pl: Improve auto-selection of mysqld location
+
+	* t/01catalog.t: minor change to improve failure message (that
+	was triggered by the s//\\0/g bug above).
+
+
+1999-04-30  Tim Bunce  <Tim.Bunce@ig.co.uk>
+
+	* t/lib.pl: Improve auto-selection of mysqld location
+
+1999-04-30  Loic Dachary  <loic@ceic.com>
+
+	* CONTRIBUTIONS: create contributions guidelines
+
+	* bin/contribute.PL: script that capture contribution methodology
+
+	* lib/Catalog.pm: separate functions for select in walk, simplify
+	select order (Tim Bunce Tim.Bunce@ig.co.uk).
+
+	* lib/Catalog/path.pm: fix bug (Tim Bunce Tim.Bunce@ig.co.uk)
+
+	* lib/Makefile.PL: entries for CVS handling (Tim Bunce Tim.Bunce@ig.co.uk)
+
+	* lib/Catalog/tools/sqledit.pm: verbose > 1 => error_stack = 1 (Tim Bunce Tim.Bunce@ig.co.uk)
+
+1999-04-27  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog.pm: add terse comments for each function
+
+	* lib/Catalog/path.pm: new, move all path manipulation routines
+	from Catalog.pm to path.pm. 
+
+	* lib/Catalog.pm: Added Catalog.conf instructions
+	path_last_link and path_root_constant. Allow per catalog name
+	specification of all path_* instructions in Catalog.conf
+
+	* lib/Catalog/path.pm: _PATH_ _PATH[0-9]+_ _PATHFILE_ _PATHFILE[0-9]+_
+	implemented.
+
+	* lib/Catalog.pm: fix bug in cdump, _PATH_ was not using script_name()
+
+1999-04-22  Loic Dachary  <loic@ceic.com>
+
+	* lib/Catalog.pm (cpathfile): added _PATHFILE_ to cedit/cbrowse
+
 1999-04-14  Loic Dachary  <loic@ceic.com>
 
 	* Catalog-0.5 release

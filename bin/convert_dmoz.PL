@@ -49,10 +49,18 @@ create table dmozrecords (
  </Catalog>
 EOF
 
-$cgi = exists($ENV{'REQUEST_METHOD'});
+my($cgi) = exists($ENV{'REQUEST_METHOD'});
 
 sub main {
     my($content, $structure, $to) = @ARGV;
+
+    if(!defined($content) ||
+       !defined($structure) ||
+       !defined($to) ||
+       ! -r $content || ! -r $structure) {
+	print STDERR "usage: $0 content.rdf structure.rdf dmoz.rdf\n";
+	return;
+    }
 
     open(TO, ">$to") or error("cannot open $to for writing : $!");
 

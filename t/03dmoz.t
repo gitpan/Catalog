@@ -1,5 +1,5 @@
 #
-# $Header: /spare2/ecila-cvsroot/Catalog/t/03dmoz.t,v 1.3 1999/04/14 13:33:07 ecila40 Exp $
+# $Header: /spare2/ecila-cvsroot/Catalog/t/03dmoz.t,v 1.4 1999/05/15 14:20:50 ecila40 Exp $
 #
 use strict;
 
@@ -30,11 +30,13 @@ print "
 #
 ";
 my($catalog) = Catalog::dmoz->new();
-$catalog->cimport_api($catname, "t/rdf/content.rdf");
-my($count) = $catalog->exec_select_one("select count(*) as count from dmozrecords")->{'count'};
+$catalog->cimport_dmoz_api('t/rdf', 'convert');
+$catalog->cimport_dmoz_api('t/rdf', 'load');
+my($count) = $catalog->db()->exec_select_one("select count(*) as count from dmozrecords")->{'count'};
 print "\n"; # finish gauge line
 ok($count == 159, 1, "import t/rdf/content.rdf $count records in dmozrecords instead of 159");
 $catalog->close();
+system("rm t/rdf/dmoz.rdf");
 }
 show_size();
 

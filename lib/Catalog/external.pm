@@ -16,7 +16,7 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
-# $Header: /spare2/ecila-cvsroot/Catalog/lib/Catalog/external.pm,v 1.3 1999/04/14 11:29:47 ecila40 Exp $
+# $Header: /spare2/ecila-cvsroot/Catalog/lib/Catalog/external.pm,v 1.4 1999/05/15 14:20:48 ecila40 Exp $
 #
 package Catalog::external;
 
@@ -79,14 +79,10 @@ sub unload {
     my($catalog_row) = $catalog->cinfo()->{$name};
     error("catalog $name does not exists") if(!defined($catalog_row));
 
-    my($schema) = "
-create table catalog_unload_$name (
-rowid int not null,
-unique catalogunload$name (rowid)
-)
-";
     open(FILE, ">$file") or error("cannot open $file for writing : $!");
-    $catalog->exec($schema);
+    my($schema) = $catalog->db()->schema('catalog_schema', 'catalog_unload');
+    $schema =~ s/NAME/$name/g;
+    $catalog->db()->exec($schema);
     eval {
 	$self->unload_head($catalog, $catalog_row);
 	$self->unload_body($catalog, $catalog_row);
@@ -97,7 +93,7 @@ unique catalogunload$name (rowid)
     };
     my($error) = $@;
     close(FILE);
-    $catalog->exec("drop table catalog_unload_$name");
+    $catalog->db()->exec("drop table catalog_unload_$name");
     error($error) if($error);
 }
 
@@ -111,7 +107,7 @@ sub unload_head {
 EOF
 
     print FILE "\n";
-    my($schema) = $catalog->table_schema($catalog_row->{'tablename'});
+    my($schema) = $catalog->db()->table_schema($catalog_row->{'tablename'});
     print FILE <<EOF;
  <Table>
   <![CDATA[
@@ -139,13 +135,13 @@ sub unload_body {
 
     my($name) = $catalog_row->{'name'};
     my($table) = $catalog_row->{'tablename'};
-    my($primary_key) = $catalog->info_table($table)->{'_primary_'};
+    my($primary_key) = $catalog->db()->info_table($table)->{'_primary_'};
     my($category_table) = "catalog_category_$name";
     my($category2category_table) = "catalog_category2category_$name";
     my($entry2category_table) = "catalog_entry2category_$name";
     my($unload_table) = "catalog_unload_$name";
 
-    $catalog->exec("insert into catalog_unload_$name select $primary_key from $table");
+    $catalog->db()->exec("insert into catalog_unload_$name select $primary_key from $table");
 
     my($func) = sub {
 	my($id, $name, $pathname, $path) = @_;
@@ -153,49 +149,61 @@ sub unload_body {
 	print FILE "\n";
 
 	print FILE " <Category>\n";
-	my($category_row) = $catalog->exec_select_one("select * from $category_table where rowid = $id");
-	my($parent) = $catalog->exec_select_one("select up from $category2category_table where down = $id and (info is null or not find_in_set('symlink', info))")->{'up'};
+	my($category_row) = $catalog->db()->exec_select_one("select * from $category_table where rowid = $id");
+	my($parent) = $catalog->db()->exec_select_one("select up from $category2category_table where down = $id and (info is null or not find_in_set('symlink', info))")->{'up'};
 	$category_row->{'parent'} = $parent;
 	$category_row->{'name'} = $pathname;
 	delete($category_row->{'count'});
 	$self->unload_record($category_row);
 	print FILE " </Category>\n";
 
-	my($entry2category_rows) = $catalog->exec_select("select row,category from $entry2category_table where category = $id");
-	my($entry2category_row);
-	foreach $entry2category_row (@$entry2category_rows) {
-	    print FILE " <Link>\n";
-	    $self->unload_record($entry2category_row);
-	    print FILE " </Link>\n";
-	}
-
-	#
-	# Select all records that have not been seen already and that 
-	# are linked to this category.
-	#
-	my($table_rows) = $catalog->exec_select("select a.* from $table as a, $entry2category_table as b, $unload_table as c where b.category = $id and b.row = a.$primary_key and c.rowid = a.$primary_key");
-	my(@primaries);
-	my($table_row);
-	foreach $table_row (@$table_rows) {
-	    print FILE " <Record table=\"$table\">\n";
-	    $self->unload_record($table_row);
-	    print FILE " </Record>\n";
-	    push(@primaries, $table_row->{$primary_key});
-	}
-	#
-	# Delete from unload_table the rowids matching records already 
-	# written to file.
-	#
-	if(@primaries) {
-	    $catalog->exec("delete from $unload_table where rowid in ( " . join(',', @primaries) . " )");
-	}
+	$self->unload_body_entries($table, $catalog, $entry2category_table, $unload_table, $primary_key, $id);
 
 	$catalog->gauge();
 
 	return 1;
     };
 
+    $self->unload_body_entries($table, $catalog, $entry2category_table, $unload_table, $primary_key, $catalog_row->{'root'});
     $catalog->walk_categories($name, $func);
+}
+
+sub unload_body_entries {
+    my($self, $table, $catalog, $entry2category_table, $unload_table, $primary_key, $id) = @_;
+
+    my($entry2category_rows) = $catalog->db()->exec_select("select row,category from $entry2category_table where category = $id");
+    #
+    # Stop if category is empty
+    #
+    return if(!defined($entry2category_rows));
+
+    my($entry2category_row);
+    foreach $entry2category_row (@$entry2category_rows) {
+	print FILE " <Link>\n";
+	$self->unload_record($entry2category_row);
+	print FILE " </Link>\n";
+    }
+
+    #
+    # Select all records that have not been seen already and that 
+    # are linked to this category.
+    #
+    my($table_rows) = $catalog->db()->exec_select("select a.* from $table as a, $entry2category_table as b, $unload_table as c where b.category = $id and b.row = a.$primary_key and c.rowid = a.$primary_key");
+    my(@primaries);
+    my($table_row);
+    foreach $table_row (@$table_rows) {
+	print FILE " <Record table=\"$table\">\n";
+	$self->unload_record($table_row);
+	print FILE " </Record>\n";
+	push(@primaries, $table_row->{$primary_key});
+    }
+    #
+    # Delete from unload_table the rowids matching records already 
+    # written to file.
+    #
+    if(@primaries) {
+	$catalog->db()->exec("delete from $unload_table where rowid in ( " . join(',', @primaries) . " )");
+    }
 }
 
 sub unload_symlinks {
@@ -203,7 +211,7 @@ sub unload_symlinks {
 
     my($name) = $catalog_row->{'name'};
     my($sql) = "select up,down from catalog_category2category_$name where find_in_set('symlink', info)";
-    my($rows) = $catalog->exec_select($sql);
+    my($rows) = $catalog->db()->exec_select($sql);
     my($row);
     foreach $row (@$rows) {
 	print FILE " <Symlink>\n";
@@ -218,7 +226,7 @@ sub unload_auth {
 
     my($name) = $catalog_row->{'name'};
     my($sql) = "select a.login,b.categorypointer from catalog_auth as a,catalog_auth_properties as b where a.rowid = b.auth";
-    my($rows) = $catalog->exec_select($sql);
+    my($rows) = $catalog->db()->exec_select($sql);
     my($row);
     foreach $row (@$rows) {
 	print FILE " <Auth>\n";
@@ -331,8 +339,8 @@ sub Table {
 
     my($catalog) = $self->{'catalog'};
     
-    $catalog->exec("drop table $table") if($catalog->info_table($table));
-    $catalog->exec($schema);
+    $catalog->db()->exec("drop table $table") if($catalog->db()->info_table($table));
+    $catalog->db()->exec($schema);
 }
 
 sub Link {
@@ -343,7 +351,7 @@ sub Link {
     my($catalog) = $self->{'catalog'};
     my($name) = $self->{'name'};
 
-    $catalog->insert("catalog_entry2category_$name",
+    $catalog->db()->insert("catalog_entry2category_$name",
 		     %$record);
 }
 
@@ -355,8 +363,13 @@ sub Catalog {
     my($catalog) = $self->{'catalog'};
     my($name) = $self->{'name'};
 
-    if(defined($name) && $name ne $record->{'name'}) {
-	error("catalog name in file ($record->{'name'}) was not expected (should be $name instead)");
+    if(defined($name)) {
+	$record->{'name'} = $name;
+    } else {
+	$self->{'name'} = $name = $record->{'name'};
+	if(!defined($name)) {
+	    error("catalog has no name");
+	}
     }
 
     $catalog->cdestroy_api($name);
@@ -388,9 +401,9 @@ sub Category {
 
     my($catalog) = $self->{'catalog'};
     my($name) = $self->{'name'};
-    my($rowid) = $catalog->insert("catalog_category_$name",
+    my($rowid) = $catalog->db()->insert("catalog_category_$name",
 				  %record);
-    $catalog->insert("catalog_category2category_$name",
+    $catalog->db()->insert("catalog_category2category_$name",
 		     'up' => $parent,
 		     'down' => $rowid);
 
@@ -407,7 +420,7 @@ sub Symlink {
     $record->{'down'} = $self->resolv_path($record->{'down'});
 
     eval {
-	$catalog->insert("catalog_category2category_$name",
+	$catalog->db()->insert("catalog_category2category_$name",
 			 'info' => 'symlink',
 			 %$record);
     };
@@ -422,15 +435,15 @@ sub Auth {
     my($name) = $self->{'name'};
     
     my($auth);
-    my($row) = $catalog->exec_select_one("select rowid from catalog_auth where login = '$record->{'login'}'");
+    my($row) = $catalog->db()->exec_select_one("select rowid from catalog_auth where login = '$record->{'login'}'");
     if(defined($row)) {
 	$auth = $row->{'rowid'};
     } else {
-	$auth = $catalog->insert("catalog_auth",
+	$auth = $catalog->db()->insert("catalog_auth",
 				 'login' => $record->{'login'});
     }
 
-    $catalog->insert("catalog_auth_properties",
+    $catalog->db()->insert("catalog_auth_properties",
 		     'auth' => $auth,
 		     'catalogname' => $name,
 		     'categorypointer' => $record->{'category'});
@@ -446,7 +459,7 @@ sub Record {
 
     my($catalog) = $self->{'catalog'};
 
-    $catalog->insert($table,
+    $catalog->db()->insert($table,
 		     %$record);
 }
 
@@ -459,7 +472,7 @@ sub Sync {
     #
     # Rebuild computed data
     #
-    $catalog->exec("drop table catalog_path_$name");
+    $catalog->db()->exec("drop table catalog_path_$name");
     $catalog->pathcheck($name);
     $catalog->category_count_api($name);
 }
@@ -475,7 +488,7 @@ sub resolv_path {
 	my($name) = $self->{'name'};
         $path .= "/" if($path !~ m|/$|o);
 	my($md5) = MD5->hexhash($catalog->path2url($path));
-	my($row) = $catalog->exec_select_one("select id from catalog_path_$name where md5 = '$md5'");
+	my($row) = $catalog->db()->exec_select_one("select id from catalog_path_$name where md5 = '$md5'");
 	if(!$row) {
 	    dbg("skip $path : not found in catalog_path_$name", "normal");
 	    return;

@@ -1,4 +1,4 @@
-$Id: README,v 1.6 1999/04/14 11:48:06 ecila40 Exp $
+$Header: /spare2/ecila-cvsroot/Catalog/README,v 1.7 1999/05/15 14:20:46 ecila40 Exp $
 
 What is it ?
 ------------
@@ -56,6 +56,11 @@ you specified with the HTMLDIR variable when installing Catalog).
 Where can I download it ?
 -------------------------
 The Catalog home page is http://www.senga.org/download.html
+
+Contributors
+------------
+
+Many thanks to Tim Bunce for being the first contributor to Catalog.
 
 Loic Dachary
 loic@senga.org

@@ -8,6 +8,9 @@ install:
          then \
           cp $$i $(config_dir) ; \
           $(chown) $(userid) $(config_dir)/$$i ; \
+         else \
+          echo $$i already installed - not overwritten ; \
+          diff $$i $(config_dir)/$$i ; \
          fi ; \
 	done	
 

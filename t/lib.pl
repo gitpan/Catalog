@@ -1,6 +1,8 @@
 use Cwd;
 use Catalog;
 
+require "conf/lib.pl";
+
 #
 # Pretend we are in a mod_perl environment
 #
@@ -13,62 +15,52 @@ $ENV{'GATEWAY_INTERFACE'} = 'CGI-Perl';
 # Run a private mysqld daemon to prevent accidental polution
 #
 mkdir("t/tmp", 0777) if(! -d "t/tmp");
-my($mysqld) = "t/tmp/mysqld";
-my($mysql_port) = "7777";
 
-if(! -f $mysqld) {
-    open(IN, "</dev/tty") or die "cannot open /dev/tty for reading: $!";
-    open(OUT, ">/dev/tty") or die "cannot open /dev/tty for writing: $!";
-    print OUT "\nThe test procedure will run a private mysql server. You must
-provide the full pathname of the mysqld executable file.
-";
-    my($default_path) = "/usr/sbin/mysqld";
-    my($path) = "_unlikely_";
-    while(! -f $path) {
-	print OUT "mysqld path [$default_path] : ";
-	$path = <IN>;
-	chop($path);
-	$path = $default_path if(!$path);
+#
+# Copy and modify configuration files for test
+#
+sub conftest {
+    my($mysql_conf) = load_config("conf/mysql.conf");
+    $mysql_conf->{'base'} = 'test';
+    $mysql_conf->{'host'} = 'localhost';
+    $mysql_conf->{'port'} = '7777';
+    my($cwd) = getcwd();
+    $mysql_conf->{'unix_port'} = "$cwd/t/tmp/db.sock";
+    $mysql_conf->{'user'} = undef;
+    $mysql_conf->{'passwd'} = undef;
+    unload_config($mysql_conf, "conf/mysql.conf", "t/conf/mysql.conf");
 
-	if($path !~ /^\//) {
-	    print OUT "$path is not an absolute pathname\n";
-	} elsif(! -f $path) {
-	    print OUT "$path is not an existing file\n";
-	} else {
-	    system("$path --version | grep Ver > /dev/null 2>&1");
-	    if($? != 0) {
-		print OUT "$path --version does not work ? Is it really mysqld the executable ?\n";
-		$path = "_unlikely_";
-	    } else {
-		system("ln -s $path $mysqld");
-	    }
-	}
-    }
-    close(IN);
-    close(OUT);
+    my($install_conf) = load_config("conf/install.conf");
+    unload_config($install_conf, "conf/install.conf", "t/conf/install.conf");
 }
 
 sub rundb {
-    my($cwd) = getcwd();
+    conftest();
+    my($mysql_conf) = load_config("t/conf/mysql.conf");
+    my($mysqld) = "$mysql_conf->{'home'}/libexec/mysqld";
+    $mysqld = "$mysql_conf->{'home'}/sbin/mysqld" unless(-f $mysqld && -x $mysqld);
+    error("$mysqld is not an executable file") unless(-f $mysqld && -x $mysqld);
     if(-f "t/tmp/db.pid") {
 	system("kill -15 `cat t/tmp/db.pid` 2>/dev/null");
     }
     system("rm -fr t/tmp/db");
     mkdir("t/tmp/db", 0777);
-    my($cmd) = "$mysqld --skip-grant-table --port $mysql_port --datadir=$cwd/t/tmp/db --pid-file $cwd/t/tmp/db.pid --socket $cwd/t/tmp/db.sock > /dev/null 2>&1 &";
+    my($mysql_opt) = "--port $mysql_conf->{'port'} --socket $mysql_conf->{'unix_port'}";
+    my($cwd) = getcwd();
+    my($cmd) = "$mysqld --skip-grant-table --datadir=$cwd/t/tmp/db --pid-file $cwd/t/tmp/db.pid $mysql_opt > /dev/null 2>&1 &";
     system($cmd);
     #
     # Wait a bit for the server to start
     #
     system("sleep 3");
-    system("mysql --port $mysql_port --socket $cwd/t/tmp/db.sock -e 'create database test'");
+    system("$mysql_conf->{'home'}/bin/mysql $mysql_opt -e 'create database test'");
 }
 
 sub stopdb {
 #
 # Cleanup
 #
-    system("kill -15 `cat t/tmp/db.pid`");
+    system("rm t/conf/mysql.conf t/conf/install.conf ; kill -15 `cat t/tmp/db.pid`");
     system("sleep 3");
 }
 

@@ -17,7 +17,7 @@
 #   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
 #
 # 
-# $Header: /spare2/ecila-cvsroot/perltools/tools.pm,v 1.13 1999/03/09 17:24:46 ecila40 Exp $
+# $Header: /spare2/ecila-cvsroot/perltools/tools.pm,v 1.15 1999/04/20 08:11:38 ecila40 Exp $
 #
 # 
 package Ecila::tools::tools;
@@ -236,24 +236,10 @@ sub template_load {
 	return defined($defaults) ? $defaults->{$base} : undef;
     }
 
-    my($include_root) = $ENV{'DOCUMENT_ROOT'} || '/etc/httpd/htdocs';
-    
     #
     # Read in the whole file
     #
     my($content) = readfile($file);
-
-    #
-    # Handle server includes directives recursively
-    #
-    while($content =~ /(<\!--\#include\s+virtual\s*=\s*\"[^\"]*\"-->)/i) {
-	my($include) = $1;
-	my($matched) = quotemeta($include);
-	my($file) = $include =~ /virtual\s*=\s*\"([^\"]*)/;
-	my($path) = "$include_root$file";
-	my($included) = readfile($path);
-	$content =~ s/$matched/$included/;
-    }
 
     return template_parse($file, $content);
 }
@@ -329,9 +315,24 @@ sub template_parse {
 sub template_build {
     my($template) = @_;
 
-    my($html) = template_fill(@_);
+    my($content) = template_fill(@_);
     template_clean(@_);
-    return $html;
+
+    my($include_root) = $ENV{'DOCUMENT_ROOT'} || '/etc/httpd/htdocs';
+    
+    #
+    # Handle server includes directives recursively
+    #
+    while($content =~ /(<\!--\#include\s+virtual\s*=\s*\"[^\"]*\"-->)/i) {
+	my($include) = $1;
+	my($matched) = quotemeta($include);
+	my($file) = $include =~ /virtual\s*=\s*\"([^\"]*)/;
+	my($path) = "$include_root$file";
+	my($included) = readfile($path);
+	$content =~ s/$matched/$included/;
+    }
+
+    return $content;
 }
 
 sub template_fill {

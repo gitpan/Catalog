@@ -1,39 +1,23 @@
-$Id: INSTALL,v 1.23 1999/04/19 13:20:50 ecila40 Exp $
+$Id: INSTALL,v 1.25 1999/05/15 14:20:46 ecila40 Exp $
 
 The Catalog home page is http://www.senga.org/
 
 Quick start (assuming you have installed MySQL and Perl):
 ---------------------------------------------------------
           #
-          # Extract the distribution
-          #
-          tar -zxvf Catalog-*.tar.gz
-          #
-          # Go to the distribution directory
-          #
-          cd Catalog-*
-	  #
-	  # Install dependent modules (assuming you've installed
-	  # the CPAN module).
-	  #
-	  MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
-	  DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
-	    perl -MCPAN -Ilib -e 'force install Bundle::Catalog'
-          #
           # replace /home/httpd/cgi-bin by your cgi-bin directory
           # replace /home/httpd/html by the directory where you put your
           #     HTML pages.
-          #
-	  mkdir /home/httpd/html/Catalog
-          HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
+	  #
+	  # Install using CPAN automatic installer
+	  #
+	  MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
+	     DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
+             USE_CONFIG='' HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
              CGIDIR=/home/httpd/cgi-bin CGIPATH=/cgi-bin \
 	     USERID=nobody \
 	     MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
-             perl Makefile.PL
-          #
-          # Install the software
-          #
-          make install
+	     perl -MCPAN -e 'force install Bundle::Catalog'
           #
           # Read the Setup chapter in the documentation. It will 
           # teach you how to configure catalog and create your first catalog.
@@ -102,11 +86,15 @@ Configuration:
                 pre-define the answers using the following environment 
                 variables:
 
+	      USE_CONFIG if you already have a working configuration installed
+		         specify the directory containing the install.conf and
+	                 mysql.conf files in this variable. USE_DEFAULTS=1 is
+			 set if USE_CONFIG is set.
               CGIDIR for the path of the directory where the cgi-bin 
                      programs will be installed.
 	      CGIPATH for the location of the cgi-bin scripts when browsing
-	               from a navgigator. Typically if you've set CGIDIR to
-	               /home/httpd/cgi-bin this will be /cgi-bin.
+	              from a navgigator. Typically if you've set CGIDIR to
+	              /home/httpd/cgi-bin this will be /cgi-bin.
               CONFIG_DIR If not specified it will default to CGIDIR. 
                      CONFIG_DIR is the path of the directory where the default 
                      configuration files will be installed. Existing
@@ -183,15 +171,67 @@ These sections are helpers to install the software required before
 you can use Catalog. The distributions packages of all these specific 
 versions can be found on the senga site at http://www.senga.org/download.html.
 
-RedHat 5.2
-----------
+FreeBSD 3.1
+-----------
+#
+# Run these as root user
+#
+#=============================================================
+#
+# Install MySQL 
+#
+#
+# Get files from ftp://ftp.tcx.se/pub/mysql/Downloads/MySQL-3.22/
+#
+tar -zxvf mysql-3.22.22.tar.gz ; \
+	cd mysql-3.22.22 ; \
+	./configure --with-named-thread-libs=-lc_r ; \
+	make ; \
+	make install ; \
+	mysql_install_db ; \
+	safe_mysqld ; \
+	mysqladmin -u root password 'passpass'
+
+#=============================================================
+#
+# Install Apache 1.3.4
+#
+cd /usr/ports/www/apache13 ; \
+	make install ; \
+	/usr/local/sbin/apachectl start
+
+#=============================================================
+#
+# Install Catalog
+#
+# Use CPAN automatic installer
+#
+MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
+ DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
+ USE_CONFIG='' HTMLDIR=/usr/local/www/data/Catalog HTMLPATH=/Catalog \
+ CGIDIR=/usr/local/www/cgi-bin CGIPATH=/cgi-bin \
+ USERID=nobody \
+ MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
+ USE_DEFAULTS=1 \
+ perl -MCPAN -e 'force install Bundle::Catalog'
+#
+# If something went wrong during the automatic install go to
+# $HOME/.cpan/build and try make install manually.
+#
+
+RedHat 5.2 and RedHat 6.0
+-------------------------
 
 #
 # Run these as root user
 #
-#-------------------------------------------------------------------------
+#=============================================================
 #
-# Build perl (RedHat 5.2 is shipped with perl5.004_04 and we need perl5.005_02)
+# Install perl5.005_02 (RedHat 5.2 only)
+# 
+# RedHat 5.2 is shipped with perl5.004_04 and we need perl5.005_02
+# This step is not necessary if you have a RedHat 6.0 because perl5.005_03 is
+# already installed.
 # Get file from http://www.perl.com/CPAN/src
 #
 tar -zxf perl5.005_02.tar.gz ; \
@@ -203,18 +243,7 @@ tar -zxf perl5.005_02.tar.gz ; \
 # Check that we are using the just compiled perl
 #
 perl -v
-#
-# Install CPAN module
-# Get file from http://www.perl.com/CPAN/modules/by-module/CPAN/
-#
-# You will be asked a lot of questions and can safely use the defaults.
-#
-tar -zxvf CPAN-1.48.tar.gz ; \
-	cd CPAN-1.48 ; \
-	perl Makefile.PL ; \
-	make ; \
-	make install
-#-------------------------------------------------------------------------
+#=============================================================
 #
 # Install MySQL 
 #
@@ -236,44 +265,24 @@ rpm -ivh MySQL-3.22.19a-1.i386.rpm
 # Finish MySQL installation
 #
 rpm -ivh MySQL-devel-3.22.19a-1.i386.rpm
-#-------------------------------------------------------------------------
+#=============================================================
 #
-# Extract Catalog distribution
+# Install Catalog
 #
-gtar -zxvf Catalog-*.gz
-cd Catalog-*
-#
-# Install Perl modules needed by Catalog
-# (change root/passpass to your real user/password)
+# Install using CPAN automatic installer
 #
 MYSQL_HOME=/usr IN_MYSQL_DISTRIBUTION=1 \
-DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
- perl -MCPAN -Ilib -e 'force install Bundle::Catalog'
-#
-# Create HTML repository 
-#
-mkdir /home/httpd/html/Catalog
-#
-# Configure catalog (change root/passpass to your real user/password)
-#
-HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
+ DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
+ USE_CONFIG='' HTMLDIR=/home/httpd/html/Catalog HTMLPATH=/Catalog \
  CGIDIR=/home/httpd/cgi-bin CGIPATH=/cgi-bin \
  USERID=nobody \
  MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
  USE_DEFAULTS=1 \
- perl Makefile.PL
+ perl -MCPAN -e 'force install Bundle::Catalog'
 #
-# Build
+# If something went wrong during the automatic install go to
+# $HOME/.cpan/build and try make install manually.
 #
-make 
-#
-# Test
-#
-make test
-#
-# Install
-#
-make install
 
 Solaris 2.6
 -----------
@@ -287,7 +296,7 @@ Solaris 2.6
 #
 export PATH=$HOME/local/bin:$PATH
 mkdir $HOME/local
-#-------------------------------------------------------------------------
+#=============================================================
 #
 # Build perl 
 # Get file from http://www.perl.com/CPAN/src
@@ -313,19 +322,7 @@ cp texi2html $HOME/local/bin
 # the first line to $HOME/local/bin/perl
 #
 chmod +x $HOME/local/bin/texi2html
-#-------------------------------------------------------------------------
-#
-# Install CPAN module
-# Get file from http://www.perl.com/CPAN/modules/by-module/CPAN/
-#
-# You will be asked a lot of questions and can safely use the defaults.
-#
-gtar -zxvf CPAN-1.48.tar.gz ; \
-	cd CPAN-1.48 ; \
-	perl Makefile.PL ; \
-	make ; \
-	make install
-#-------------------------------------------------------------------------
+#=============================================================
 #
 # Install MySQL 
 #
@@ -350,7 +347,7 @@ export PATH=$HOME/local/mysql/bin:$PATH
  echo "[mysqld]"
  echo "basedir=$HOME/local/mysql"
 ) > $HOME/.my.cnf
-#-------------------------------------------------------------------------
+#=============================================================
 #
 # Build Apache
 #
@@ -380,45 +377,24 @@ gtar -zxvf apache_1.3.4.tar.gz ; \
 # (http://www.yourmachine.org:8080/)
 #
 $HOME/local/bin/apachectl start
-#-------------------------------------------------------------------------
+#=============================================================
 #
-# Extract Catalog distribution
+# Install Catalog
 #
-gtar -zxvf Catalog-*.gz
-cd Catalog-*
-#
-# Install Perl modules needed by Catalog
-# (change root/passpass to your real user/password)
+# Use CPAN automatic installer
 #
 MYSQL_HOME=$HOME/local/mysql IN_MYSQL_DISTRIBUTION=1 \
-DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
- perl -MCPAN -Ilib -e 'force install Bundle::Catalog'
-#
-# Create HTML repository 
-#
-mkdir $HOME/htdocs/Catalog
-#
-# Configure catalog (change root/passpass to your real user/password)
-#
-HTMLDIR=$HOME/local/htdocs/Catalog HTMLPATH=/Catalog \
+ DBI_DB=mysql DBI_DSN=dbi:mysql:mysql DBI_USER=root DBI_PASS=passpass \
+ USE_CONFIG='' HTMLDIR=$HOME/local/htdocs/Catalog HTMLPATH=/Catalog \
  CGIDIR=$HOME/local/cgi-bin CGIPATH=/cgi-bin \
- USERID=$LOGNAME \
+ USERID=nobody \
  MYSQL_USER=root MYSQL_PASSWORD=passpass MYSQL_BASE=mysql \
  USE_DEFAULTS=1 \
- perl Makefile.PL
+ perl -MCPAN -e 'force install Bundle::Catalog'
 #
-# Build
+# If something went wrong during the automatic install go to
+# $HOME/.cpan/build and try make install manually.
 #
-make 
-#
-# Test
-#
-make test
-#
-# Install
-#
-make install
-
 --------------------------------------
 
 

@@ -1,3 +1,7 @@
+1999-05-15  Loic Dachary  <loic@ceic.com>
+
+	* sqledit.pm (selector): local($SIG{__DIE__}); (Thanks Tim Bunce) to reduce stack redundancy.
+
 1999-04-14  Loic Dachary  <loic@ceic.com>
 
 	* sqledit.pm (special_auth_initialize): added special_auth for CFCE

@@ -34,7 +34,6 @@ prefix=$HOME/local
 	    --with-perl=$prefix/bin/perl \
 	    --activate-module=src/modules/perl/libperl.a \
 	    --enable-module=info \
-	    --enable-module=rewrite \
 	    --enable-module=status \
 	    --enable-module=usertrack )
 	#

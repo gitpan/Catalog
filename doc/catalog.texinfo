@@ -5,9 +5,9 @@
 @setchapternewpage odd
 @c %**end of header
 
-@set RCSID $Id: catalog.texinfo,v 1.21 1999/04/14 11:29:44 ecila40 Exp $
-@set VERSION 0.5
-@set UPDATED April 1999
+@set RCSID $Id: catalog.texinfo,v 1.23 1999/05/17 10:13:40 ecila40 Exp $
+@set VERSION 0.9
+@set UPDATED May 1999
 @set PERL perl5.005_02
 @set MySQL MySQL-3.22.19a-gamma
 
@@ -3775,15 +3775,92 @@ at the end of the file.
 @cindex dmoz.org
 
 The site @uref{http://www.dmoz.org/,} provides a dump of their catalog data.
-A conversion routine between their XML format and the Catalog XML format
-is provided (convert_dmoz). The @strong{Catalog} class was derived to 
-implement specific features and may be accessed using the @strong{dmoz}
-cgi-bin script instead of the @strong{Catalog} cgi-bin script.
+The format of the dump is a custom XML that looks like RDF but is not really.
+Since the XML format of dmoz.org and the XML format of Catalog are not
+compatible, the @strong{convert_dmoz} is provided to perform the translation.
+It can be called on the command line to produce a dmoz.rdf file ready for 
+loading with Catalog.
+
+Since the dmoz.org catalog has specific requirements, a specialized version
+of Catalog is also provided. If you access Catalog using the @strong{CGIDIR/dmoz}
+cgi script instead of @strong{CGIDIR/Catalog}, you will use this specialized
+version.
 
 We have loaded a version of dmoz.org that contains approximately 400 000
 records and around 65 000 categories on a Pentium 350. It leads to a
-400Mb MySQL database and the response time when navigating the
-categories is excellent.
+400Mb MySQL database. It takes about seven hours to load.  The response
+time when navigating the categories is excellent, provided you are using
+Apache + mod_perl.
+
+The memory used during the load is around 10Mb for the conversion
+and 10Mb for loading. If you notice that the processes are growing
+beyond these limits, make sure you are using the XML-Parser version
+provided on www.senga.org. XML-Parser-2.21 and XML-Parser-2.23 have
+a known memory leak problem.
+
+In order to load dmoz.org data using Catalog you must follow these steps:
+
+@itemize @bullet
+
+@item
+Load the content.rdf.gz and structure.rdf.gz from http://dmoz.org/rdf.html
+and make sure they are in the same directory. 
+
+@item
+Uncompress content.rdf.gz and structure.rdf.gz. 
+
+@item
+Display the control panel using the @strong{dmoz} cgi script instead of
+@strong{Catalog} : 
+
+@example
+http://www.mymachine.org/cgi-bin/dmoz?context=ccontrol_panel.
+@end example
+
+@item
+Click on the @code{Load from file} link. Now you should see a screen that looks
+like the figure below.
+
+@image{images/dmoz1,10cm,}
+
+@item
+Enter the fully qualified path name of the directory containing the
+content.rdf and structure.rdf files in the input box.
+
+@item
+Click on the @strong{'Convert it!'} button and wait for completion.
+Don't be disturbed by the blank page shown, the script sends some
+white space characters to prevent timeout. When the conversion
+is finished the HTML page is redisplayed.
+
+@item
+You are now ready to build the database. Click on the @strong{'Load it!'}
+button and wait for completion. When the load is finished, the
+control panel is redisplayed. You should see a new thematic catalog
+named @strong{dmoz}.
+@end itemize
+
+Alternatively you may want to do it using the command line only.
+
+@itemize @bullet
+
+@item
+Convert content.rdf and structure.rdf into dmoz.rdf.
+
+@example
+convert_dmoz content.rdf structure.rdf dmoz.rdf
+@end example
+
+@item
+Load the dmoz.rdf file using Catalog.
+
+@example
+REQUEST_METHOD=GET \
+QUERY_STRING="context=cimport_dmoz&path=`pwd`&action=load" \
+ CGIDIR/dmoz
+@end example
+
+@end itemize
 
 @node Template files introduction, Catalog template files, External representation, Top
 @chapter Template files introduction
@@ -4677,6 +4754,24 @@ A report from the action that displayed the template.
 Full path of the current category, as built by the navigation of the user,
 @xref{Catalog configuration file, ,@code{Catalog configuration file}}.
 May not be the shortest path.
+
+@cindex _PATH[0-9]+_
+@item _PATH[0-9]+_
+Path component of the current category. _PATH0_ is the rightmost component of the path.
+
+@cindex _PATHFILE_
+@item _PATHFILE_
+Full path of the current category, as built by the navigation of the user,
+@xref{Catalog configuration file, ,@code{Catalog configuration file}}.
+In this for the characters white space, slash, simple quote and double quote
+have been replaced by underscore. Therefore _PATHFILE_ can ben used as the
+name of a file, hence the name. For instance @code{/Sport and amusement/Vacations/} will
+be @code{_Sport_and_amusement_Vacations_}
+
+@cindex _PATHFILE[0-9]+_
+@item _PATHFILE[0-9]+_
+Path component of the current category, transformed in the same was as 
+_PATHFILE_. _PATHFILE0_ is the rightmost component of the path.
 
 @cindex _CATEGORY_
 @item _CATEGORY_

@@ -1,6 +1,6 @@
 package Bundle::Catalog;
 
-$VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
 
 1;
 
@@ -30,9 +30,11 @@ XML::DOM 1.19	     - building DOM Level 1 compliant document structures
 
 MIME::Base64 2.11    - Encoding and decoding of base64 strings
 
-Unicode::String 1.20 - String of Unicode characters
+Unicode::String 1.21 - String of Unicode characters
 
-Unicode::Map8 0.05   - Mapping table between 8-bit chars and Unicode
+Unicode::Map8 0.06   - Mapping table between 8-bit chars and Unicode
+
+Catalog 0.05         - Resources catalog management and display
 
 =head1 DESCRIPTION
 
@@ -41,6 +43,6 @@ This bundle defines all reqreq modules for Catalog.
 
 =head1 AUTHOR
 
-Loic Dachar <loic@senga.org>
+Loic Dachary <loic@senga.org>
 
 =cut

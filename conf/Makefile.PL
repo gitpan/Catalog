@@ -3,58 +3,18 @@
 require 5.005;
 use strict;
 
-sub load_config {
-    my($config) = @_;
-
-    my(%record);
-    open(FILE, "<$config") || die "cannot open $config for reading : $!";
-    while(<FILE>) {
-        my($var, $value) = /^([a-z0-9_]+)\s*=\s*(.*?)\s*$/io;
-	if(defined($var)) {
-	    $record{$var} = $value;
-	}
-    }
-    close(FILE);
-
-    return \%record;
-}
-
-sub unload_config {
-    my($config, $record) = @_;
-
-    my($buffer);
-    open(FILE, "<$config") || die "cannot open $config for reading : $!";
-    while(<FILE>) {
-        my($var) = /^([a-z0-9_]+?)\s*=/io;
-	($var) = /^\s*#([a-z0-9_]+?)\s*=/io if(!defined($var));
-
-	if(defined($var) && exists($record->{$var})) {
-	    if(defined($record->{$var})) {
-		$buffer .= "$var = $record->{$var}\n";
-	    } else {
-		$buffer .= "#$var = \n";
-	    }
-	} else {
-	    $buffer .= $_;
-	}
-    }
-    close(FILE);
-
-    system("cp $config $config.orig") if(! -f "$config.orig");
-    open(FILE, ">$config") || die "cannot open $config for writing : $!";
-    print FILE $buffer;
-    close(FILE);
-}
+require "./lib.pl";
 
 %::var2env = (
 	      'infodir' => 'INFODIR',
 	      'cgidir' => 'CGIDIR',
 	      'cgipath' => 'CGIPATH',
 	      'config_dir' => 'CONFIG_DIR',
+	      'use_config' => 'USE_CONFIG',
 	      'htmldir' => 'HTMLDIR',
 	      'htmlpath' => 'HTMLPATH',
 	      'userid' => 'USERID',
-	      'base' => 'MYSQL_BASE',
+	      'home' => 'MYSQL_HOME',
 	      'user' => 'MYSQL_USER',
 	      'passwd' => 'MYSQL_PASSWORD',
 	      'host' => 'MYSQL_HOST',
@@ -92,6 +52,7 @@ sub getparam_valid {
 	    return 0;
 	}
     }
+
     if($spec->{'directory'}) {
 	if(! -d $value) {
 	    print "$value is not an existing directory " if(!$silent);
@@ -99,6 +60,12 @@ sub getparam_valid {
 	    return 0;
 	}
     }
+
+    if($spec->{'postamble'}) {
+	my($func) = $spec->{'postamble'};
+	return 0 unless(&$func($var, $value, $undefp, $silent, $spec));
+    }
+
     return 1;
 }
 
@@ -302,7 +269,7 @@ be installed (Emacs info format only)",
 	$install_conf->{'chown'} = ':';
     }
     
-    unload_config("install.conf", $install_conf);
+    unload_config($install_conf, "install.conf");
 }
 
 sub install_ask {
@@ -373,7 +340,7 @@ owner must be the same as the userid of the HTTP server",
                 'mandatory' => 1,
     });
 
-    unload_config("install.conf", $install_conf);
+    unload_config($install_conf, "install.conf");
 }
 
 sub mysql_ask {
@@ -389,6 +356,23 @@ to the MySQL database to be established.
 
     my($ok);
     do {
+	getparam('home', $mysql_conf,
+		 {
+		     'prompt' => "Directory in which MySQL is installed. For instance
+if you have /usr/local/include/mysql then the directory is /usr/local.",
+		     'mandatory' => 1,
+		     'directory' => 1,
+		     'absolute' => 1,
+		     'postamble' => sub {
+			 my($var, $value, $undefp, $silent, $spec) = @_;
+			 my($include) = "$value/include/mysql";
+			 if(! -d $include) {
+			     print "$include is not a directory " if(!$silent);
+			     return 0;
+			 }
+			 return 1;
+		     },
+		 });
 	getparam('base', $mysql_conf,
 		 {
 		     'prompt' => "MySQL database where the catalog tables will be created.
@@ -432,7 +416,7 @@ Please fix the mysql parameters so that a connection can be established.
 	}
     } while(!$ok);
 
-    unload_config("mysql.conf", $mysql_conf);
+    unload_config($mysql_conf, "mysql.conf");
 }
 
 my($ok) = 0;
@@ -453,25 +437,42 @@ sub dbconnect {
     return $status;
 }
 
-sub conf2opt {
-    my($mysql_conf) = @_;
-    
-    my(%map) = (
-		'user' => 'user',
-		'passwd' => 'password',
-		'port' => 'port',
-		'host' => 'host',
-		'unix_port' => 'socket',
-		);
-    my($opt) = '';
-    my($key);
-    foreach $key ('user', 'passwd', 'port', 'host', 'unix_port') {
-	$opt .= " --$map{$key}='$mysql_conf->{$key}'" if(defined($mysql_conf->{$key}) && $mysql_conf->{$key} !~ /^\s*$/o);
-    }
+#
+# Reuse an existing configuration
+#
+sub search_conf {
+    my(%conf);
 
-    $mysql_conf->{'cmd_opt'} = $opt;
+    getparam('use_config', \%conf,
+	     {
+		 'prompt' => "
+Shall I take default configuration values from an existing configuration ? If yes specify the
+directory. If no just type return and we will proceed with questions.
+",
+                 'directory' => 1,
+                 'absolute' => 1,
+		 'postamble' => sub {
+		     my($var, $value, $undefp, $silent, $spec) = @_;
+
+		     if(! -f "$value/mysql.conf" || ! -f "$value/install.conf") {
+			 print "$value directory must contain mysql.conf and install.conf " if(!$silent);
+			 return 0;
+		     }
+		     return 1;
+		 },
+    });
+
+    if(-d "$conf{'use_config'}") {
+	my($file);
+	foreach $file (qw(install.conf mysql.conf)) {
+	    system("cp $file $file.orig") if(! -f "$file.orig");
+	    system("cp $conf{'use_config'}/$file $file");
+	}
+	$ENV{'USE_DEFAULTS'} = 1;
+    }
 }
 
+search_conf();
 install_ask();
 misc_ask();
 mysql_ask();
